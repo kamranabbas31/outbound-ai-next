@@ -4,7 +4,20 @@ import animate from "tailwindcss-animate";
 /** @type {import('tailwindcss').Config} */
 const config = {
   darkMode: ["class"],
-  content: ["./src/**/*.{ts,tsx}"],
+  content: [
+    "./src/app/**/*.{ts,tsx}",
+    "./src/components/**/*.{ts,tsx}",
+    "./src/contexts/**/*.{ts,tsx}",
+    "./src/hooks/**/*.{ts,tsx}",
+    "./src/integrations/**/*.{ts,tsx}",
+    "./src/lib/**/*.{ts,tsx}",
+    "./src/providers/**/*.{ts,tsx}",
+    "./src/services/**/*.{ts,tsx}",
+    "./src/store/**/*.{ts,tsx}",
+    "./src/utils/**/*.{ts,tsx}",
+    "./src/components/ui/**/*.{ts,tsx}",
+  ],
+
   theme: {
     container: {
       center: true,

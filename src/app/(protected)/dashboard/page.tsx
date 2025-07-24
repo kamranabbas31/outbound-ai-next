@@ -1,6 +1,6 @@
 "use client";
 import { FC, useState, useEffect, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { FileUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -31,8 +31,6 @@ import StatsGrid from "@/components/dashboard/StatsGrid";
 import ControlsSection from "@/components/dashboard/ControlsSection";
 import LeadsTable from "@/components/dashboard/LeadsTable";
 import SearchBar from "@/components/dashboard/SearchBar";
-import { parse } from "path";
-import { set } from "date-fns";
 
 interface Lead {
   id: string;
@@ -47,10 +45,11 @@ interface Lead {
   recording_url?: string | null;
 }
 
-const Dashboard: FC = () => {
+export const Dashboard: FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const campaignId = searchParams.get("campaignId");
+  const params = useParams();
+  const campaignId = params?.id as string;
 
   const [isUploading, setIsUploading] = useState(false);
   const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
@@ -253,7 +252,7 @@ const Dashboard: FC = () => {
   };
 
   const clearCampaignView = () => {
-    router.push("/");
+    router.push("/dashboard");
     setIsViewingCampaign(false);
     setActiveCampaign(null);
     document.title = "Dashboard - Call Manager";

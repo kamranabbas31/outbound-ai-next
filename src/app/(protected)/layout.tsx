@@ -1,11 +1,14 @@
-// app/(dashboard)/layout.tsx (or wherever your dashboard routes are nested)
 "use client";
 
-import { FC, ReactNode } from "react";
-import { LogOut, User } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ReactNode, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { useRouter } from "next/navigation";
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "./../../components/AppSidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,34 +16,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { AppSidebar } from "./AppSidebar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { LogOut, User } from "lucide-react";
 import { toast } from "sonner";
 
-interface LayoutProps {
-  children: ReactNode;
-}
-
-const Layout: FC<LayoutProps> = ({ children }) => {
-  const pathname = usePathname();
+export default function ProtectedLayout({ children }: { children: ReactNode }) {
+  const user = useSelector((s: any) => s.auth.user);
   const router = useRouter();
-  const { logout } = useAuth();
+
+  useEffect(() => {
+    if (!user) router.replace("/login");
+  }, [user]);
+
+  if (!user) return null;
 
   const handleLogout = () => {
-    logout();
+    // replace with your actual logout logic
     toast.success("Logged out successfully");
-    router.push("/login");
+    router.replace("/login");
   };
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+
+        <SidebarInset className="flex-1 flex-col">
           <header className="bg-white border-b h-16 flex items-center justify-between px-8 sticky top-0 z-40">
             <SidebarTrigger className="h-8 w-8" />
             <DropdownMenu>
@@ -59,24 +60,22 @@ const Layout: FC<LayoutProps> = ({ children }) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem className="text-sm">
-                  <span>conversionmediagroup</span>
+                  conversionmediagroup
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="text-sm cursor-pointer flex items-center text-red-500 focus:text-red-500"
+                  className="text-sm cursor-pointer flex items-center text-red-500"
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
+                  <LogOut className="mr-2 h-4 w-4" /> Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </header>
+
           <main className="py-6 px-8 overflow-auto">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>
   );
-};
-
-export default Layout;
+}

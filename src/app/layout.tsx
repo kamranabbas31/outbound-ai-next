@@ -22,7 +22,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="bg-green-500 text-white p-10">Tailwind Test</div>
         <Providers>{children}</Providers>
       </body>
     </html>

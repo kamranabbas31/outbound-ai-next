@@ -101,7 +101,7 @@ const Campaigns: FC = () => {
   };
 
   const handleCampaignClick = (campaignId: string) => {
-    router.push(`/?campaignId=${campaignId}`);
+    router.push(`/campaigns/${campaignId}`);
   };
 
   const handleDownloadReport = async (
