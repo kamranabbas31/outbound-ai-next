@@ -1,0 +1,4 @@
+project_id = "evoogvazubdyjapdzvpt"
+
+[functions.vapi-webhook]
+verify_jwt = false
