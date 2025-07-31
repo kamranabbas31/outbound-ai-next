@@ -1,26 +1,31 @@
 "use client";
 import React, {
   createContext,
-  useState,
   useContext,
+  useState,
   useEffect,
   ReactNode,
 } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser, clearUser } from "@/store/authSlice";
 import { RootState } from "@/store/store";
+import { useLoginMutation, useRegisterMutation } from "@/generated/graphql";
 
 interface User {
   id: string;
   username: string;
+  email?: string;
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   login: (username: string, password: string) => Promise<boolean>;
-  signup: (username: string, password: string) => Promise<boolean>;
+  signup: (
+    email: string,
+    username: string,
+    password: string
+  ) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -40,10 +45,12 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const dispatch = useDispatch();
-
   const reduxUser = useSelector((state: RootState) => state.auth.user);
   const [user, setUserState] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  const [loginMutation] = useLoginMutation();
+  const [registerMutation] = useRegisterMutation();
 
   useEffect(() => {
     if (reduxUser) {
@@ -60,15 +67,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     password: string
   ): Promise<boolean> => {
     try {
-      const { data, error } = await supabase.functions.invoke("login", {
-        body: { username, password },
+      const { data, errors } = await loginMutation({
+        variables: {
+          data: {
+            username,
+            password,
+          },
+        },
       });
-      console.log({ data });
-      if (error) throw new Error(error.message);
 
-      const parsed = typeof data === "string" ? JSON.parse(data) : data;
-      const user = parsed.user;
-      dispatch(setUser({ id: user.id, username: user.username }));
+      if (errors || !data?.login?.accessToken) throw new Error("Login failed");
+
+      // Save accessToken to secure cookie/localStorage if needed
+      // Example:
+      localStorage.setItem("accessToken", data.login.accessToken);
+
+      // Optionally decode token to get user info or use another query
+      dispatch(setUser({ id: data.login.user.id, username }));
+
       return true;
     } catch (err) {
       console.error("Login error:", err);
@@ -77,15 +93,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signup = async (
+    email: string,
     username: string,
     password: string
   ): Promise<boolean> => {
     try {
-      const { error } = await supabase.functions.invoke("signup", {
-        body: JSON.stringify({ username, password }),
+      const { data, errors } = await registerMutation({
+        variables: {
+          data: {
+            email,
+            username,
+            password,
+          },
+        },
       });
 
-      if (error) throw new Error(error.message);
+      if (errors || !data?.register?.user) throw new Error("Signup failed");
+
+      const { id, username: uname } = data.register.user;
+      dispatch(setUser({ id, username: uname }));
+
       return true;
     } catch (err) {
       console.error("Signup error:", err);
@@ -94,6 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    localStorage.removeItem("accessToken");
     dispatch(clearUser());
   };
 

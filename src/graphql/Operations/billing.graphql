@@ -1,0 +1,12 @@
+query FetchBillingData($userId: String!, $start: String!, $end: String!) {
+  fetchBillingData(userId: $userId, start: $start, end: $end) {
+    userError {
+      message
+    }
+    data {
+      totalCalls
+      totalMinutes
+      totalCost
+    }
+  }
+}

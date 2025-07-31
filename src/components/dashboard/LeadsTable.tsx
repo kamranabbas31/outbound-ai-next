@@ -50,6 +50,7 @@ interface LeadsTableProps {
   totalLeads: number;
   startIndex?: number;
   endIndex?: number;
+  ITEMS_PER_PAGE?: number;
 }
 
 const LeadsTable: FC<LeadsTableProps> = ({
@@ -68,6 +69,7 @@ const LeadsTable: FC<LeadsTableProps> = ({
   totalLeads,
   startIndex,
   endIndex,
+  ITEMS_PER_PAGE,
 }) => {
   const [playingLeadId, setPlayingLeadId] = useState<string | null>(null);
 
@@ -179,7 +181,6 @@ const LeadsTable: FC<LeadsTableProps> = ({
         );
       }
     }
-
     return items;
   };
   const formatDateTime = (dateString: string) => {
@@ -214,6 +215,7 @@ const LeadsTable: FC<LeadsTableProps> = ({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>#</TableHead>
                 <TableHead>Lead Name</TableHead>
                 <TableHead>Phone Number</TableHead>
                 <TableHead>Status</TableHead>
@@ -227,8 +229,11 @@ const LeadsTable: FC<LeadsTableProps> = ({
             </TableHeader>
             <TableBody>
               {isDashboardInitialized && paginatedLeads.length > 0 ? (
-                paginatedLeads.map((lead) => (
+                paginatedLeads.map((lead, index) => (
                   <TableRow key={lead.id}>
+                    <TableCell>
+                      {(currentPage - 1) * ITEMS_PER_PAGE! + index + 1}
+                    </TableCell>
                     <TableCell>{lead.name}</TableCell>
                     <TableCell>{lead.phone_number}</TableCell>
                     <TableCell>{lead.status}</TableCell>

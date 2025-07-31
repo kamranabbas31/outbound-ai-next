@@ -18,7 +18,7 @@ const Login: FC = () => {
     e.preventDefault();
     setIsLoading(true);
     const success = await login(username, password);
-    console.log({ success });
+
     if (success) {
       toast.success("Login successful");
       router.push("/");

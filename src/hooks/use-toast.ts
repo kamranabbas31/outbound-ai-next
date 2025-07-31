@@ -189,7 +189,6 @@ export const toast = {
         ...options,
       },
     });
-    console.log("Success toast:", title, options);
     return id;
   },
   error: (title: string, options?: Partial<ToasterToast>) => {
@@ -203,7 +202,6 @@ export const toast = {
         ...options,
       },
     });
-    console.log("Error toast:", title, options);
     return id;
   },
   info: (title: string, options?: Partial<ToasterToast>) => {
@@ -216,7 +214,6 @@ export const toast = {
         ...options,
       },
     });
-    console.log("Info toast:", title, options);
     return id;
   },
   warning: (title: string, options?: Partial<ToasterToast>) => {

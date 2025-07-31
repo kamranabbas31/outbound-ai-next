@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { updateCampaignStats } from "@/services/campaignService";
+import { useFetchCampaignStatsLazyQuery } from "@/generated/graphql";
 
-interface Lead {
+export interface Lead {
   id: string;
   name: string;
   phone_number: string;
@@ -17,7 +15,7 @@ interface Lead {
   initiated_at?: string | null;
 }
 
-interface LeadStats {
+export interface LeadStats {
   completed: number;
   inProgress: number;
   remaining: number;
@@ -31,6 +29,7 @@ export const useLeads = (
   isDashboardInitialized: boolean,
   campaignId: any
 ) => {
+  const [loadStats, { data, error }] = useFetchCampaignStatsLazyQuery();
   const [stats, setStats] = useState<LeadStats>({
     completed: 0,
     inProgress: 0,
@@ -47,93 +46,34 @@ export const useLeads = (
     }
   }, [campaignId]);
 
-  // Set up real-time subscriptions
-  useEffect(() => {
-    if (!campaignId) return;
-
-    console.log("Setting up real-time subscriptions for campaign:", campaignId);
-
-    // Subscribe to campaign stats changes
-    const campaignChannel = supabase
-      .channel("campaign-stats-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "campaigns",
-          filter: `id=eq.${campaignId}`,
-        },
-        (payload) => {
-          console.log("Campaign stats updated:", payload.new);
-          const newCampaign = payload.new as any;
-          setStats({
-            completed: newCampaign.completed,
-            inProgress: newCampaign.in_progress,
-            remaining: newCampaign.remaining,
-            failed: newCampaign.failed,
-            totalDuration: newCampaign.duration,
-            totalCost: newCampaign.cost,
-          });
-        }
-      )
-      .subscribe();
-
-    // Subscribe to leads changes that affect this campaign
-    const leadsChannel = supabase
-      .channel("leads-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
-          schema: "public",
-          table: "leads",
-        },
-        (payload) => {
-          console.log("Lead changed:", payload);
-          // The database trigger will update campaign stats automatically
-          // We just log this for debugging purposes
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log("Cleaning up real-time subscriptions");
-      supabase.removeChannel(campaignChannel);
-      supabase.removeChannel(leadsChannel);
-    };
-  }, [campaignId]);
-
   const fetchCampaignStats = async () => {
     if (!campaignId) return;
 
     try {
-      const { data, error } = await supabase
-        .from("campaigns")
-        .select("completed, in_progress, remaining, failed, duration, cost")
-        .eq("id", campaignId)
-        .single();
+      const response = await loadStats({ variables: { campaignId } });
 
-      if (error) {
-        console.error("Error fetching campaign stats:", error);
+      const userError = response.data?.fetchCampaignStats?.userError;
+      const stats = response.data?.fetchCampaignStats?.data;
+
+      if (userError) {
+        console.error("User error:", userError.message);
         return;
       }
 
-      if (data) {
+      if (stats) {
         setStats({
-          completed: data.completed,
-          inProgress: data.in_progress,
-          remaining: data.remaining,
-          failed: data.failed,
-          totalDuration: data.duration,
-          totalCost: data.cost,
+          completed: stats.completed ?? 0,
+          inProgress: stats.inProgress ?? 0,
+          remaining: stats.remaining ?? 0,
+          failed: stats.failed ?? 0,
+          totalDuration: stats.totalDuration ?? 0,
+          totalCost: stats.totalCost ?? 0,
         });
       }
-    } catch (error) {
-      console.error("Error in fetchCampaignStats:", error);
+    } catch (err) {
+      console.error("GraphQL error in fetchCampaignStats:", err);
     }
   };
-
   const resetDashboardData = () => {
     setStats({
       completed: 0,

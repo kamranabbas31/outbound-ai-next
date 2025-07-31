@@ -1,56 +1,78 @@
+import * as XLSX from "xlsx";
+import { toast } from "sonner";
+import client from "../lib/apollo-client";
+import { gql } from "@apollo/client";
+import { Lead } from "@/hooks/useLeads";
 
-import * as XLSX from 'xlsx';
-import { fetchLeadsForCampaign } from './campaignService';
-import { toast } from 'sonner';
+const FETCH_LEADS_QUERY = gql`
+  query FetchLeadsForCampaign($campaignId: String!, $skip: Int, $take: Int) {
+    fetchLeadsForCampaign(campaignId: $campaignId, skip: $skip, take: $take) {
+      data {
+        name
+        phone_number
+        status
+        disposition
+        duration
+        cost
+      }
+    }
+  }
+`;
 
-export const downloadCampaignReport = async (campaignId: string, campaignName: string) => {
+export const downloadCampaignReport = async (
+  campaignId: string,
+  campaignName: string
+) => {
   try {
-    // Fetch leads for the campaign
-    const leads = await fetchLeadsForCampaign(campaignId);
-    
-    if (!leads || leads.length === 0) {
+    const { data } = await client.query({
+      query: FETCH_LEADS_QUERY,
+      variables: {
+        campaignId,
+        skip: 0,
+        take: 10000000,
+      },
+    });
+
+    const leads = (data?.fetchLeadsForCampaign?.data as Lead[]) ?? [];
+
+    if (!leads.length) {
       toast.error("No leads found for this campaign");
       return;
     }
 
-    // Format the data for Excel using only existing fields
-    const excelData = leads.map(lead => ({
-      'Lead Name': lead.name || '',
-      'Phone Number': lead.phone_number || '',
-      'Status': lead.status || '',
-      'Disposition': lead.disposition || '',
-      'Duration (minutes)': lead.duration ? lead.duration.toFixed(2) : '0.00',
-      'Cost ($)': lead.cost ? lead.cost.toFixed(2) : '0.00'
+    const excelData = leads.map((lead) => ({
+      "Lead Name": lead.name || "",
+      "Phone Number": lead.phone_number || "",
+      Status: lead.status || "",
+      Disposition: lead.disposition || "",
+      "Duration (minutes)": lead.duration?.toFixed(2) ?? "0.00",
+      "Cost ($)": lead.cost?.toFixed(2) ?? "0.00",
     }));
 
-    // Create workbook and worksheet
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-    // Auto-size columns
-    const columnWidths = [
-      { wch: 20 }, // Lead Name
-      { wch: 15 }, // Phone Number
-      { wch: 12 }, // Status
-      { wch: 20 }, // Disposition
-      { wch: 15 }, // Duration
-      { wch: 10 }  // Cost
+    worksheet["!cols"] = [
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 10 },
     ];
-    worksheet['!cols'] = columnWidths;
 
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Campaign Results');
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Campaign Results");
 
-    // Generate filename
-    const sanitizedCampaignName = campaignName.replace(/[^a-z0-9]/gi, '_');
-    const filename = `${sanitizedCampaignName}_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const sanitizedName = campaignName.replace(/[^a-z0-9]/gi, "_");
+    const filename = `${sanitizedName}_Report_${
+      new Date().toISOString().split("T")[0]
+    }.xlsx`;
 
-    // Download the file
     XLSX.writeFile(workbook, filename);
-    
+
     toast.success(`Report downloaded: ${filename}`);
   } catch (error) {
-    console.error('Error generating campaign report:', error);
-    toast.error('Failed to generate campaign report');
+    console.error("Error generating campaign report:", error);
+    toast.error("Failed to generate campaign report");
   }
 };

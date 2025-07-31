@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 const Signup: FC = () => {
   const router = useRouter();
   const { signup, login } = useAuth();
+  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +20,7 @@ const Signup: FC = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    const success = await signup(username, password);
+    const success = await signup(email, username, password);
 
     if (success) {
       toast.success("Account created successfully");
@@ -52,6 +53,16 @@ const Signup: FC = () => {
                 placeholder="Enter your username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>

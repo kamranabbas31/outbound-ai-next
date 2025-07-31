@@ -1,0 +1,26 @@
+mutation Register($data: RegisterInput!) {
+  register(data: $data) {
+    message
+    user {
+      id
+      username
+      email
+    }
+  }
+}
+
+mutation Login($data: LoginInput!) {
+  login(data: $data) {
+    accessToken
+    user {
+      id
+      username
+    }
+  }
+}
+
+mutation Refresh {
+  refresh {
+    accessToken
+  }
+}

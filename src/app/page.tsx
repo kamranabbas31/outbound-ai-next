@@ -10,15 +10,13 @@ export default function HomeRedirector() {
   const user = useSelector((state: any) => state.auth.user);
 
   useEffect(() => {
-    console.log({ pathname, router });
-    if (pathname === "/") {
-      if (user) {
-        router.replace("/dashboard");
-      } else {
-        router.replace("/login");
-      }
+    // Only run this effect on the client
+    if (typeof window === "undefined") return;
+
+    if (pathname === "/" && user !== undefined) {
+      router.replace(user ? "/dashboard" : "/login");
     }
-  }, [user, router]);
+  }, [pathname, user]);
 
   return null;
 }
