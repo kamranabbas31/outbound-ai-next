@@ -1,0 +1,3 @@
+query GetMultipleAvailablePhoneIds($count: Int!) {
+  getMultipleAvailablePhoneIds(count: $count)
+}

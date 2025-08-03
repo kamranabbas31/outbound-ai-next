@@ -1,0 +1,160 @@
+# ===========================
+#         QUERIES
+# ===========================
+
+query FetchCampaigns($userId: String!) {
+  fetchCampaigns(userId: $userId) {
+    userError {
+      message
+    }
+    data {
+      id
+      name
+      file_name
+      status
+      execution_status
+      leads_count
+      completed
+      in_progress
+      remaining
+      failed
+      duration
+      cost
+      user_id
+      created_at
+    }
+  }
+}
+
+query FetchLeadsForCampaign(
+  $campaignId: String!
+  $skip: Int
+  $take: Int
+  $searchTerm: String
+) {
+  fetchLeadsForCampaign(
+    campaignId: $campaignId
+    skip: $skip
+    take: $take
+    searchTerm: $searchTerm
+  ) {
+    userError {
+      message
+    }
+    data {
+      id
+      name
+      phone_number
+      phone_id
+      status
+      disposition
+      duration
+      cost
+      recordingUrl
+      created_at
+      campaign_id
+      initiated
+    }
+  }
+}
+
+query FetchCampaignById($campaignId: ID!) {
+  fetchCampaignById(campaignId: $campaignId) {
+    userError {
+      message
+    }
+    data {
+      id
+      name
+      file_name
+      status
+      execution_status
+      leads_count
+      completed
+      in_progress
+      remaining
+      failed
+      duration
+      cost
+      user_id
+      created_at
+    }
+  }
+}
+
+# ✅ NEW: FetchCampaignStats
+query FetchCampaignStats($campaignId: ID!) {
+  fetchCampaignStats(campaignId: $campaignId) {
+    userError {
+      message
+    }
+    data {
+      completed
+      inProgress
+      remaining
+      failed
+      totalDuration
+      totalCost
+    }
+  }
+}
+
+query GetTotalPagesForCampaign($campaignId: String!, $itemsPerPage: Int) {
+  getTotalPagesForCampaign(
+    campaignId: $campaignId
+    itemsPerPage: $itemsPerPage
+  ) {
+    totalPages
+    totalLeads
+  }
+}
+
+# ===========================
+#        MUTATIONS
+# ===========================
+
+mutation CreateCampaign($campaignName: String!, $userId: String!) {
+  createCampaign(campaignName: $campaignName, userId: $userId) {
+    userError {
+      message
+    }
+    data {
+      id
+      name
+      user_id
+      created_at
+    }
+  }
+}
+
+mutation AddLeadsToCampaign($campaignId: String!, $leads: [LeadInput!]!) {
+  addLeadsToCampaign(campaignId: $campaignId, leads: $leads) {
+    userError {
+      message
+    }
+    data {
+      id
+      name
+      leads_count
+    }
+  }
+}
+mutation EnqueueCampaignJob($campaignId: String!, $pacingPerSecond: Int = 1) {
+  enqueueCampaignJob(
+    campaignId: $campaignId
+    pacingPerSecond: $pacingPerSecond
+  ) {
+    userError {
+      message
+    }
+    success
+  }
+}
+mutation StopCampaignJob($campaignId: String!) {
+  stopCampaignJob(campaignId: $campaignId) {
+    userError {
+      message
+    }
+    success
+  }
+}
