@@ -1,6 +1,6 @@
 "use client";
 import { FC, useState, useEffect, useMemo } from "react";
-import { useSearchParams, useRouter, useParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { FileUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -47,10 +47,26 @@ interface Lead {
   recording_url?: string | null;
 }
 
+export interface Campaign {
+  id: string;
+  name: string;
+  file_name?: string | null;
+  status?: string | null;
+  execution_status?: string | null;
+  leads_count?: number | null;
+  completed?: number | null;
+  in_progress?: number | null;
+  remaining?: number | null;
+  failed?: number | null;
+  duration?: number | null;
+  cost?: number | null;
+  user_id?: string | null;
+  created_at?: string | null;
+}
+
 export const Dashboard: FC = () => {
   //Mutations
-  const [createCampaignMutation, { data, loading, error }] =
-    useCreateCampaignMutation();
+  const [createCampaignMutation] = useCreateCampaignMutation();
   const [addLeadsToCampaignMutation] = useAddLeadsToCampaignMutation();
   //Queries
   const [fetchLeadsForCampaignQuery] = useFetchLeadsForCampaignLazyQuery();
@@ -67,7 +83,7 @@ export const Dashboard: FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [isSearchActive, setIsSearchActive] = useState(false);
-  const [activeCampaign, setActiveCampaign] = useState<any>(null);
+  const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(null);
   const [isViewingCampaign, setIsViewingCampaign] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [currentCampaignId, setCurrentCampaignId] = useState<string | null>(
@@ -152,10 +168,7 @@ export const Dashboard: FC = () => {
     setSelectedPacing,
     toggleExecution,
     triggerSingleCall,
-  } = useCampaignExecution(
-    stats,
-    isViewingCampaign ? campaignId : currentCampaignId
-  );
+  } = useCampaignExecution(isViewingCampaign ? campaignId : currentCampaignId);
 
   // Load campaign data if campaignId is present in URL
   useEffect(() => {
@@ -459,7 +472,9 @@ export const Dashboard: FC = () => {
                 </div>
                 <p className="text-muted-foreground">
                   Campaign created on{" "}
-                  {new Date(activeCampaign.created_at).toLocaleDateString()}
+                  {activeCampaign?.created_at
+                    ? new Date(activeCampaign.created_at).toLocaleDateString()
+                    : "-"}
                 </p>
               </>
             ) : (
@@ -478,7 +493,9 @@ export const Dashboard: FC = () => {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setCurrentCampaignId(activeCampaign.id);
+                  if (activeCampaign) {
+                    setCurrentCampaignId(activeCampaign.id);
+                  }
                   setShowUploadDialog(true);
                 }}
               >
@@ -578,8 +595,9 @@ export const Dashboard: FC = () => {
               />
             </div>
             <p className="text-sm text-muted-foreground">
-              This will create a new empty campaign. You'll be prompted to
-              upload leads afterward.
+              {
+                "This will create a new empty campaign. You'll be prompted to upload leads afterward."
+              }
             </p>
           </div>
           <DialogFooter>

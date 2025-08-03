@@ -27,7 +27,7 @@ export interface LeadStats {
 export const useLeads = (
   isViewingCampaign: boolean,
   isDashboardInitialized: boolean,
-  campaignId: any
+  campaignId: string | null | undefined
 ) => {
   const [loadStats, { data, error }] = useFetchCampaignStatsLazyQuery();
   const [stats, setStats] = useState<LeadStats>({

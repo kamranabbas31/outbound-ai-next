@@ -18,6 +18,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { toast } from "sonner";
+import Image from "next/image";
 
 export const AppSidebar: FC = () => {
   const pathname = usePathname();
@@ -51,7 +52,7 @@ export const AppSidebar: FC = () => {
     <Sidebar className="border-r bg-white z-50">
       <SidebarHeader className="bg-white">
         <div className="flex items-center space-x-2 px-4 py-2">
-          <img
+          <Image
             src="/lovable-uploads/620a3236-a743-4779-8cde-07f0a587c6ed.png"
             alt="Conversion Media Logo"
             className="h-8"

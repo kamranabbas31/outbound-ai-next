@@ -1,6 +1,6 @@
 "use client";
 import { FC, useState, useEffect } from "react";
-import { Calendar, Phone, DollarSign, Clock3 } from "lucide-react";
+import { Phone, DollarSign, Clock3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatCard from "@/components/StatCard";
 import { toast } from "sonner";

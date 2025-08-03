@@ -19,14 +19,15 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { LogOut, User } from "lucide-react";
 import { toast } from "sonner";
+import { RootState } from "@/store/store";
 
 export default function ProtectedLayout({ children }: { children: ReactNode }) {
-  const user = useSelector((s: any) => s.auth.user);
+  const user = useSelector((s: RootState) => s.auth.user);
   const router = useRouter();
 
   useEffect(() => {
     if (!user) router.replace("/login");
-  }, [user]);
+  }, [user, router]);
 
   if (!user) return null;
 

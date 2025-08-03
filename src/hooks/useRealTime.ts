@@ -5,17 +5,18 @@ import {
 import { getSocket } from "@/lib/socket";
 import debounce from "lodash/debounce";
 import { useEffect } from "react";
-import { LeadStats } from "./useLeads";
+import { Lead, LeadStats } from "./useLeads";
 import { stopExecution } from "@/store/executionSlice";
 import { toast } from "sonner";
 import { useDispatch } from "react-redux";
+import { Campaign } from "@/components/pages/dashboard";
 
 export function useRealTime(
   campaignId: string,
   startIndex: number,
   endIndex: number,
 
-  setLeads: (leads: any[]) => void,
+  setLeads: (leads: Lead[]) => void,
   setStats: (stats: LeadStats) => void
 ) {
   //Queries
@@ -38,19 +39,19 @@ export function useRealTime(
           fetchPolicy: "network-only",
         });
 
-        setLeads(data?.fetchLeadsForCampaign.data ?? []);
+        setLeads((data?.fetchLeadsForCampaign.data as Lead[]) ?? []);
       } catch (error) {
         console.error("Error fetching leads:", error);
       }
     }, 0); // Delay: 1 second
 
-    const onLeadChange = (lead: any) => {
+    const onLeadChange = (lead: Lead) => {
       if (lead.campaign_id === campaignId) {
         debouncedFetchLeads();
       }
     };
 
-    const onCampaignChange = async (campaign: any) => {
+    const onCampaignChange = async (campaign: Campaign) => {
       if (campaign.id === campaignId) {
         if (campaign.status === "idle") {
           dispatch(stopExecution(campaignId));

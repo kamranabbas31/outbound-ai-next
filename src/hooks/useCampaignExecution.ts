@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,8 +14,11 @@ import {
   useStopCampaignJobMutation,
 } from "@/generated/graphql";
 
-export const useCampaignExecution = (stats: any, campaignId: any) => {
+export const useCampaignExecution = (campaignId: string | null) => {
   // mutation
+  if (!campaignId) {
+    throw new Error("Campaign ID is required for execution");
+  }
   const [enqueueCampaignJob] = useEnqueueCampaignJobMutation();
   const [stopCampaignJob] = useStopCampaignJobMutation();
 

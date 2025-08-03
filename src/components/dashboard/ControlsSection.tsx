@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Campaign } from "../pages/dashboard";
 
 interface ControlsSectionProps {
   isViewingCampaign: boolean;
@@ -19,7 +20,7 @@ interface ControlsSectionProps {
   setSelectedPacing: (value: string) => void;
   toggleExecution: () => void;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  activeCampaign?: any;
+  activeCampaign?: Campaign | null;
   setCurrentCampaignId: (id: string) => void;
   setShowUploadDialog: (show: boolean) => void;
 }
@@ -51,7 +52,9 @@ const ControlsSection: FC<ControlsSectionProps> = ({
               className="flex items-center space-x-2"
               variant="outline"
               onClick={() => {
-                setCurrentCampaignId(activeCampaign.id);
+                if (activeCampaign) {
+                  setCurrentCampaignId(activeCampaign.id);
+                }
                 setShowUploadDialog(true);
               }}
             >
@@ -141,7 +144,7 @@ const ControlsSection: FC<ControlsSectionProps> = ({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Conversion Rate:</span>
               <span className="font-medium">
-                {activeCampaign && activeCampaign.leads_count > 0
+                {activeCampaign?.leads_count && activeCampaign.completed != null
                   ? `${Math.round(
                       (activeCampaign.completed / activeCampaign.leads_count) *
                         100
@@ -182,7 +185,8 @@ const ControlsSection: FC<ControlsSectionProps> = ({
             disabled={true}
           />
           <p className="text-xs text-muted-foreground">
-            Use "+ New Campaign" button above to create a campaign first
+            Use &quot;+ New Campaign&quot; button above to create a campaign
+            first
           </p>
         </div>
       </div>

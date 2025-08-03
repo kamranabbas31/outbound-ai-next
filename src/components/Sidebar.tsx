@@ -7,11 +7,11 @@ import { LayoutDashboard, Phone, FileText, LogOut } from "lucide-react";
 import { useDispatch } from "react-redux"; // or useAuth if you're using context
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 const Sidebar: FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const dispatch = useDispatch(); // useAuth() if you're using context
 
   const menuItems = [
     {
@@ -41,7 +41,7 @@ const Sidebar: FC = () => {
     <div className="hidden md:flex flex-col h-screen w-56 border-r bg-white">
       <div className="flex items-center h-16 px-4 border-b">
         <div className="flex items-center space-x-2">
-          <img
+          <Image
             src="/lovable-uploads/620a3236-a743-4779-8cde-07f0a587c6ed.png"
             alt="Conversion Media Logo"
             className="h-8"

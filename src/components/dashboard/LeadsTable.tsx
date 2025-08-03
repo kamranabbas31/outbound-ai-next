@@ -1,4 +1,4 @@
-import { FC, useState, useMemo } from "react";
+import { FC, useState } from "react";
 import { Phone, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {

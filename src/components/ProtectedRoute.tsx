@@ -1,17 +1,24 @@
-import { FC } from "react";
-import { Navigate } from "react-router-dom";
+"use client";
+
+import { JSX, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: JSX.Element;
 }
 
-const ProtectedRoute: FC<ProtectedRouteProps> = ({ children }) => {
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated } = useAuth();
+  const router = useRouter();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated) return null; // Optional: Show loader here
 
   return children;
 };
