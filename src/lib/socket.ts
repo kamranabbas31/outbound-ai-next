@@ -5,7 +5,7 @@ let socket: Socket;
 
 export const getSocket = () => {
   if (!socket) {
-    socket = io("http://52.23.188.217:4000", {
+    socket = io(process.env.NEXT_PUBLIC_BACKEND, {
       transports: ["websocket"],
       withCredentials: true,
     });

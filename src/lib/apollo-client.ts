@@ -3,7 +3,7 @@ import { ApolloClient, InMemoryCache, HttpLink } from "@apollo/client";
 
 const client = new ApolloClient({
   link: new HttpLink({
-    uri: "http://52.23.188.217:4000/graphql", // Change to your backend endpoint
+    uri: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT, // Change to your backend endpoint
     // credentials: "include", // Only if using cookies for auth
   }),
   cache: new InMemoryCache(),
