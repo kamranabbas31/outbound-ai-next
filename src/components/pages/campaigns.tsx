@@ -23,6 +23,15 @@ interface Campaign {
   duration: number;
   cost: number;
   created_at: string;
+  cadence_template?: {
+    id: string;
+    name: string;
+  } | null;
+  cadence_progress?: Array<{
+    day: number;
+    attempt: number;
+    executed_at: string;
+  }>;
 }
 
 const Campaigns: FC = () => {
@@ -106,14 +115,14 @@ const Campaigns: FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (timestamp: string) => {
+    const date = new Date(Number(timestamp)); // convert string to number
+    return date.toLocaleDateString("en-US", {
       year: "numeric",
-      month: "long",
+      month: "short", // "Jul", "Aug", etc.
       day: "numeric",
     });
   };
-
   const handleCampaignClick = (campaignId: string) => {
     router.push(`/campaigns/${campaignId}`);
   };
@@ -121,10 +130,11 @@ const Campaigns: FC = () => {
   const handleDownloadReport = async (
     campaignId: string,
     campaignName: string,
+    cadence: boolean,
     event: React.MouseEvent
   ) => {
     event.stopPropagation(); // Prevent row click when downloading
-    await downloadCampaignReport(campaignId, campaignName);
+    await downloadCampaignReport(campaignId, campaignName, cadence);
   };
 
   const handleRefresh = () => {
@@ -132,6 +142,21 @@ const Campaigns: FC = () => {
     toast.success("Campaigns refreshed");
   };
 
+  const getCadenceProgress = (campaign: Campaign) => {
+    // If there's no attached cadence template
+    if (!campaign.cadence_template?.id) {
+      return "No Cadence";
+    }
+
+    // If there is at least one cadence_progress entry
+    const latestProgress = campaign.cadence_progress?.[0];
+    if (latestProgress) {
+      return `Day ${latestProgress.day}, ${latestProgress.attempt} attempts`;
+    }
+
+    // If template exists but no progress made yet
+    return "No Attempts";
+  };
   return (
     <div className="space-y-8 max-w-full">
       <div className="flex justify-between items-center">
@@ -154,7 +179,7 @@ const Campaigns: FC = () => {
           </p>
         </div>
         <div className="overflow-x-auto max-w-full">
-          <table className="w-full min-w-[1100px] caption-bottom text-sm">
+          <table className="w-full min-w-[1200px] caption-bottom text-sm">
             <thead>
               <tr className="border-b">
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
@@ -162,6 +187,12 @@ const Campaigns: FC = () => {
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
                   Status
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
+                  Cadence
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
+                  Attempts
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
                   Leads
@@ -196,7 +227,7 @@ const Campaigns: FC = () => {
               {isLoading ? (
                 <tr className="h-[100px]">
                   <td
-                    colSpan={11}
+                    colSpan={13}
                     className="text-center text-muted-foreground"
                   >
                     Loading campaigns...
@@ -214,6 +245,22 @@ const Campaigns: FC = () => {
                     </td>
                     <td className="p-4 align-middle whitespace-nowrap">
                       {getStatusBadge(campaign.status)}
+                    </td>
+                    <td className="p-4 align-middle whitespace-nowrap">
+                      {campaign.cadence_template ? (
+                        <Badge variant="secondary">
+                          {campaign.cadence_template.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          No Cadence
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4 align-middle whitespace-nowrap">
+                      <span className="text-sm text-muted-foreground">
+                        {getCadenceProgress(campaign)}
+                      </span>
                     </td>
                     <td className="p-4 align-middle whitespace-nowrap">
                       {campaign.leads_count}
@@ -244,7 +291,7 @@ const Campaigns: FC = () => {
                         variant="outline"
                         size="sm"
                         onClick={(e) =>
-                          handleDownloadReport(campaign.id, campaign.name, e)
+                          handleDownloadReport(campaign.id, campaign.name, campaign.cadence_template?.id ? true : false, e)
                         }
                         className="flex items-center gap-2"
                       >
@@ -257,7 +304,7 @@ const Campaigns: FC = () => {
               ) : (
                 <tr className="h-[100px]">
                   <td
-                    colSpan={11}
+                    colSpan={13}
                     className="text-center text-muted-foreground"
                   >
                     No campaigns found. Create a new campaign to get started.

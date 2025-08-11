@@ -15,6 +15,22 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean; }
   Int: { input: number; output: number; }
   Float: { input: number; output: number; }
+  DateTime: { input: any; output: any; }
+  JSON: { input: any; output: any; }
+};
+
+export enum ActivityType {
+  CadenceExecution = 'CADENCE_EXECUTION',
+  CallAttempt = 'CALL_ATTEMPT',
+  DispositionTransition = 'DISPOSITION_TRANSITION',
+  NoteAdded = 'NOTE_ADDED',
+  StatusUpdate = 'STATUS_UPDATE'
+}
+
+export type AttachCadenceInput = {
+  cadenceId: Scalars['String']['input'];
+  campaignId: Scalars['String']['input'];
+  startDate?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
 export type AuthPayload = {
@@ -35,8 +51,54 @@ export type BillingStatsResponse = {
   userError?: Maybe<UserError>;
 };
 
+export type CadenceAttachResponse = {
+  __typename?: 'CadenceAttachResponse';
+  success?: Maybe<Scalars['Boolean']['output']>;
+  userError?: Maybe<UserError>;
+};
+
+export type CadenceDayInput = {
+  attempts: Scalars['Int']['input'];
+  time_windows: Array<Scalars['String']['input']>;
+};
+
+export type CadenceDaysInput = {
+  config: CadenceDayInput;
+  day: Scalars['String']['input'];
+};
+
+export type CadenceProgress = {
+  __typename?: 'CadenceProgress';
+  attempt: Scalars['Int']['output'];
+  day: Scalars['Int']['output'];
+  executed_at: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+};
+
+export type CadenceTemplate = {
+  __typename?: 'CadenceTemplate';
+  cadence_days: Scalars['JSON']['output'];
+  campaigns: Array<Campaign>;
+  created_at: Scalars['DateTime']['output'];
+  id: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  retry_dispositions: Array<Scalars['String']['output']>;
+};
+
+export type CadenceTemplatesResponse = {
+  __typename?: 'CadenceTemplatesResponse';
+  templates?: Maybe<Array<CadenceTemplate>>;
+  userError?: Maybe<UserError>;
+};
+
 export type Campaign = {
   __typename?: 'Campaign';
+  cadence_completed?: Maybe<Scalars['Boolean']['output']>;
+  cadence_progress: Array<CadenceProgress>;
+  cadence_start_date?: Maybe<Scalars['DateTime']['output']>;
+  cadence_stopped?: Maybe<Scalars['Boolean']['output']>;
+  cadence_template?: Maybe<CadenceTemplate>;
+  cadence_template_id?: Maybe<Scalars['String']['output']>;
   completed?: Maybe<Scalars['Int']['output']>;
   cost?: Maybe<Scalars['Float']['output']>;
   created_at?: Maybe<Scalars['String']['output']>;
@@ -88,6 +150,40 @@ export type CampaignStatsResponse = {
   userError?: Maybe<UserError>;
 };
 
+export type CreateCadenceTemplateInput = {
+  cadence_days: Array<CadenceDaysInput>;
+  name: Scalars['String']['input'];
+  retry_dispositions: Array<Scalars['String']['input']>;
+};
+
+export type CreateCadenceTemplateResponse = {
+  __typename?: 'CreateCadenceTemplateResponse';
+  template?: Maybe<CadenceTemplate>;
+  userError?: Maybe<UserError>;
+};
+
+export type DashboardStats = {
+  __typename?: 'DashboardStats';
+  completed: Scalars['Int']['output'];
+  failed: Scalars['Int']['output'];
+  inProgress: Scalars['Int']['output'];
+  remaining: Scalars['Int']['output'];
+  totalCost: Scalars['Float']['output'];
+  totalDuration: Scalars['Float']['output'];
+};
+
+export type DashboardStatsResponse = {
+  __typename?: 'DashboardStatsResponse';
+  data?: Maybe<DashboardStats>;
+  userError?: Maybe<UserError>;
+};
+
+export type DeleteCadenceTemplateResponse = {
+  __typename?: 'DeleteCadenceTemplateResponse';
+  success: Scalars['Boolean']['output'];
+  userError?: Maybe<UserError>;
+};
+
 export type Lead = {
   __typename?: 'Lead';
   campaign_id?: Maybe<Scalars['String']['output']>;
@@ -96,12 +192,38 @@ export type Lead = {
   disposition?: Maybe<Scalars['String']['output']>;
   duration?: Maybe<Scalars['Float']['output']>;
   id: Scalars['String']['output'];
-  initiated?: Maybe<Scalars['Boolean']['output']>;
+  initiated_at?: Maybe<Scalars['Boolean']['output']>;
   name?: Maybe<Scalars['String']['output']>;
   phone_id?: Maybe<Scalars['String']['output']>;
   phone_number?: Maybe<Scalars['String']['output']>;
   recordingUrl?: Maybe<Scalars['String']['output']>;
   status?: Maybe<Scalars['String']['output']>;
+};
+
+export type LeadActivityLog = {
+  __typename?: 'LeadActivityLog';
+  activity_type: ActivityType;
+  campaign_id: Scalars['String']['output'];
+  cost?: Maybe<Scalars['Float']['output']>;
+  created_at: Scalars['String']['output'];
+  disposition_at?: Maybe<Scalars['String']['output']>;
+  duration?: Maybe<Scalars['Float']['output']>;
+  from_disposition?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  lead_id: Scalars['String']['output'];
+  to_disposition?: Maybe<Scalars['String']['output']>;
+};
+
+export type LeadActivityLogFilterInput = {
+  activity_type?: InputMaybe<ActivityType>;
+  campaign_id?: InputMaybe<Scalars['String']['input']>;
+  lead_id?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type LeadActivityLogResponse = {
+  __typename?: 'LeadActivityLogResponse';
+  data?: Maybe<Array<LeadActivityLog>>;
+  userError?: Maybe<UserError>;
 };
 
 export type LeadInput = {
@@ -136,24 +258,52 @@ export type LoginPayload = {
 export type Mutation = {
   __typename?: 'Mutation';
   addLeadsToCampaign: CampaignResponse;
+  attachCadenceToCampaign: CadenceAttachResponse;
+  createCadenceTemplate: CreateCadenceTemplateResponse;
   createCampaign: CampaignResponse;
+  createPhoneIds: Scalars['Boolean']['output'];
+  deleteCadenceTemplate: DeleteCadenceTemplateResponse;
   enqueueCampaignJob: QueueResponse;
   login: LoginPayload;
   refresh: AuthPayload;
   register: RegisterResponse;
+  stopCadence: CadenceAttachResponse;
   stopCampaignJob: QueueResponse;
+  updateCampaign: UpdateCampaignResponse;
 };
 
 
 export type MutationAddLeadsToCampaignArgs = {
+  cadenceId?: InputMaybe<Scalars['String']['input']>;
+  cadenceStartDate?: InputMaybe<Scalars['DateTime']['input']>;
   campaignId: Scalars['String']['input'];
   leads: Array<LeadInput>;
+};
+
+
+export type MutationAttachCadenceToCampaignArgs = {
+  input: AttachCadenceInput;
+};
+
+
+export type MutationCreateCadenceTemplateArgs = {
+  input: CreateCadenceTemplateInput;
 };
 
 
 export type MutationCreateCampaignArgs = {
   campaignName: Scalars['String']['input'];
   userId: Scalars['String']['input'];
+};
+
+
+export type MutationCreatePhoneIdsArgs = {
+  phoneIds: Array<Scalars['String']['input']>;
+};
+
+
+export type MutationDeleteCadenceTemplateArgs = {
+  id: Scalars['String']['input'];
 };
 
 
@@ -173,20 +323,33 @@ export type MutationRegisterArgs = {
 };
 
 
+export type MutationStopCadenceArgs = {
+  campaignId: Scalars['String']['input'];
+};
+
+
 export type MutationStopCampaignJobArgs = {
   campaignId: Scalars['String']['input'];
+};
+
+
+export type MutationUpdateCampaignArgs = {
+  input: UpdateCampaignInput;
 };
 
 export type Query = {
   __typename?: 'Query';
   _empty?: Maybe<Scalars['String']['output']>;
+  cadenceTemplates: CadenceTemplatesResponse;
   fetchBillingData: BillingStatsResponse;
   fetchCampaignById: CampaignResponse;
   fetchCampaignStats: CampaignStatsResponse;
   fetchCampaigns: CampaignListResponse;
+  fetchDashboardStats: DashboardStatsResponse;
   fetchLeadsForCampaign: LeadListResponse;
   getMultipleAvailablePhoneIds: Array<Scalars['String']['output']>;
   getTotalPagesForCampaign: CampaignLeadPaginationResult;
+  leadActivityLogs: LeadActivityLogResponse;
 };
 
 
@@ -212,6 +375,13 @@ export type QueryFetchCampaignsArgs = {
 };
 
 
+export type QueryFetchDashboardStatsArgs = {
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+  userId: Scalars['String']['input'];
+};
+
+
 export type QueryFetchLeadsForCampaignArgs = {
   campaignId: Scalars['String']['input'];
   searchTerm?: InputMaybe<Scalars['String']['input']>;
@@ -228,6 +398,11 @@ export type QueryGetMultipleAvailablePhoneIdsArgs = {
 export type QueryGetTotalPagesForCampaignArgs = {
   campaignId: Scalars['String']['input'];
   itemsPerPage?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryLeadActivityLogsArgs = {
+  filter: LeadActivityLogFilterInput;
 };
 
 export type QueueResponse = {
@@ -248,6 +423,32 @@ export type RegisterResponse = {
   user: User;
 };
 
+export type UpdateCampaignInput = {
+  cadence_completed?: InputMaybe<Scalars['Boolean']['input']>;
+  cadence_start_date?: InputMaybe<Scalars['DateTime']['input']>;
+  cadence_stopped?: InputMaybe<Scalars['Boolean']['input']>;
+  cadence_template_id?: InputMaybe<Scalars['String']['input']>;
+  completed?: InputMaybe<Scalars['Int']['input']>;
+  cost?: InputMaybe<Scalars['Float']['input']>;
+  duration?: InputMaybe<Scalars['Float']['input']>;
+  execution_status?: InputMaybe<Scalars['String']['input']>;
+  failed?: InputMaybe<Scalars['Int']['input']>;
+  file_name?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['String']['input'];
+  in_progress?: InputMaybe<Scalars['Int']['input']>;
+  leads_count?: InputMaybe<Scalars['Int']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  remaining?: InputMaybe<Scalars['Int']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateCampaignResponse = {
+  __typename?: 'UpdateCampaignResponse';
+  campaign?: Maybe<Campaign>;
+  success: Scalars['Boolean']['output'];
+  userError?: Maybe<UserError>;
+};
+
 export type User = {
   __typename?: 'User';
   email: Scalars['String']['output'];
@@ -259,6 +460,13 @@ export type UserError = {
   __typename?: 'UserError';
   message: Scalars['String']['output'];
 };
+
+export type LeadActivityLogsQueryVariables = Exact<{
+  filter: LeadActivityLogFilterInput;
+}>;
+
+
+export type LeadActivityLogsQuery = { __typename?: 'Query', leadActivityLogs: { __typename?: 'LeadActivityLogResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: Array<{ __typename?: 'LeadActivityLog', id: string, lead_id: string, campaign_id: string, activity_type: ActivityType, from_disposition?: string | null, to_disposition?: string | null, disposition_at?: string | null, duration?: number | null, cost?: number | null, created_at: string }> | null } };
 
 export type RegisterMutationVariables = Exact<{
   data: RegisterInput;
@@ -288,12 +496,31 @@ export type FetchBillingDataQueryVariables = Exact<{
 
 export type FetchBillingDataQuery = { __typename?: 'Query', fetchBillingData: { __typename?: 'BillingStatsResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: { __typename?: 'BillingStats', totalCalls: number, totalMinutes: number, totalCost: number } | null } };
 
+export type CadenceTemplatesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type CadenceTemplatesQuery = { __typename?: 'Query', cadenceTemplates: { __typename?: 'CadenceTemplatesResponse', userError?: { __typename?: 'UserError', message: string } | null, templates?: Array<{ __typename?: 'CadenceTemplate', id: string, name: string, retry_dispositions: Array<string>, cadence_days: any, created_at: any, campaigns: Array<{ __typename?: 'Campaign', id: string, name: string }> }> | null } };
+
+export type CreateCadenceTemplateMutationVariables = Exact<{
+  input: CreateCadenceTemplateInput;
+}>;
+
+
+export type CreateCadenceTemplateMutation = { __typename?: 'Mutation', createCadenceTemplate: { __typename?: 'CreateCadenceTemplateResponse', userError?: { __typename?: 'UserError', message: string } | null, template?: { __typename?: 'CadenceTemplate', id: string, name: string, retry_dispositions: Array<string>, cadence_days: any, created_at: any, campaigns: Array<{ __typename?: 'Campaign', id: string, name: string }> } | null } };
+
+export type DeleteCadenceTemplateMutationVariables = Exact<{
+  id: Scalars['String']['input'];
+}>;
+
+
+export type DeleteCadenceTemplateMutation = { __typename?: 'Mutation', deleteCadenceTemplate: { __typename?: 'DeleteCadenceTemplateResponse', success: boolean, userError?: { __typename?: 'UserError', message: string } | null } };
+
 export type FetchCampaignsQueryVariables = Exact<{
   userId: Scalars['String']['input'];
 }>;
 
 
-export type FetchCampaignsQuery = { __typename?: 'Query', fetchCampaigns: { __typename?: 'CampaignListResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: Array<{ __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null }> | null } };
+export type FetchCampaignsQuery = { __typename?: 'Query', fetchCampaigns: { __typename?: 'CampaignListResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: Array<{ __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string } | null }> | null } };
 
 export type FetchLeadsForCampaignQueryVariables = Exact<{
   campaignId: Scalars['String']['input'];
@@ -303,14 +530,14 @@ export type FetchLeadsForCampaignQueryVariables = Exact<{
 }>;
 
 
-export type FetchLeadsForCampaignQuery = { __typename?: 'Query', fetchLeadsForCampaign: { __typename?: 'LeadListResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: Array<{ __typename?: 'Lead', id: string, name?: string | null, phone_number?: string | null, phone_id?: string | null, status?: string | null, disposition?: string | null, duration?: number | null, cost?: number | null, recordingUrl?: string | null, created_at?: string | null, campaign_id?: string | null, initiated?: boolean | null }> | null } };
+export type FetchLeadsForCampaignQuery = { __typename?: 'Query', fetchLeadsForCampaign: { __typename?: 'LeadListResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: Array<{ __typename?: 'Lead', id: string, name?: string | null, phone_number?: string | null, phone_id?: string | null, status?: string | null, disposition?: string | null, duration?: number | null, cost?: number | null, recordingUrl?: string | null, created_at?: string | null, campaign_id?: string | null, initiated_at?: boolean | null }> | null } };
 
 export type FetchCampaignByIdQueryVariables = Exact<{
   campaignId: Scalars['ID']['input'];
 }>;
 
 
-export type FetchCampaignByIdQuery = { __typename?: 'Query', fetchCampaignById: { __typename?: 'CampaignResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: { __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null } | null } };
+export type FetchCampaignByIdQuery = { __typename?: 'Query', fetchCampaignById: { __typename?: 'CampaignResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: { __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_template_id?: string | null, cadence_start_date?: any | null, cadence_stopped?: boolean | null, cadence_completed?: boolean | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string } | null } | null } };
 
 export type FetchCampaignStatsQueryVariables = Exact<{
   campaignId: Scalars['ID']['input'];
@@ -338,6 +565,8 @@ export type CreateCampaignMutation = { __typename?: 'Mutation', createCampaign: 
 export type AddLeadsToCampaignMutationVariables = Exact<{
   campaignId: Scalars['String']['input'];
   leads: Array<LeadInput> | LeadInput;
+  cadenceId?: InputMaybe<Scalars['String']['input']>;
+  cadenceStartDate?: InputMaybe<Scalars['DateTime']['input']>;
 }>;
 
 
@@ -358,6 +587,36 @@ export type StopCampaignJobMutationVariables = Exact<{
 
 export type StopCampaignJobMutation = { __typename?: 'Mutation', stopCampaignJob: { __typename?: 'QueueResponse', success?: boolean | null, userError?: { __typename?: 'UserError', message: string } | null } };
 
+export type AttachCadenceToCampaignMutationVariables = Exact<{
+  input: AttachCadenceInput;
+}>;
+
+
+export type AttachCadenceToCampaignMutation = { __typename?: 'Mutation', attachCadenceToCampaign: { __typename?: 'CadenceAttachResponse', success?: boolean | null, userError?: { __typename?: 'UserError', message: string } | null } };
+
+export type StopCadenceMutationVariables = Exact<{
+  campaignId: Scalars['String']['input'];
+}>;
+
+
+export type StopCadenceMutation = { __typename?: 'Mutation', stopCadence: { __typename?: 'CadenceAttachResponse', success?: boolean | null, userError?: { __typename?: 'UserError', message: string } | null } };
+
+export type UpdateCampaignMutationVariables = Exact<{
+  input: UpdateCampaignInput;
+}>;
+
+
+export type UpdateCampaignMutation = { __typename?: 'Mutation', updateCampaign: { __typename?: 'UpdateCampaignResponse', success: boolean, userError?: { __typename?: 'UserError', message: string } | null, campaign?: { __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_template_id?: string | null, cadence_start_date?: any | null, cadence_stopped?: boolean | null, cadence_completed?: boolean | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string } | null } | null } };
+
+export type FetchDashboardStatsQueryVariables = Exact<{
+  userId: Scalars['String']['input'];
+  startDate?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type FetchDashboardStatsQuery = { __typename?: 'Query', fetchDashboardStats: { __typename?: 'DashboardStatsResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: { __typename?: 'DashboardStats', completed: number, inProgress: number, remaining: number, failed: number, totalDuration: number, totalCost: number } | null } };
+
 export type GetMultipleAvailablePhoneIdsQueryVariables = Exact<{
   count: Scalars['Int']['input'];
 }>;
@@ -365,7 +624,68 @@ export type GetMultipleAvailablePhoneIdsQueryVariables = Exact<{
 
 export type GetMultipleAvailablePhoneIdsQuery = { __typename?: 'Query', getMultipleAvailablePhoneIds: Array<string> };
 
+export type CreatePhoneIdsMutationVariables = Exact<{
+  phoneIds: Array<Scalars['String']['input']> | Scalars['String']['input'];
+}>;
 
+
+export type CreatePhoneIdsMutation = { __typename?: 'Mutation', createPhoneIds: boolean };
+
+
+export const LeadActivityLogsDocument = gql`
+    query LeadActivityLogs($filter: LeadActivityLogFilterInput!) {
+  leadActivityLogs(filter: $filter) {
+    userError {
+      message
+    }
+    data {
+      id
+      lead_id
+      campaign_id
+      activity_type
+      from_disposition
+      to_disposition
+      disposition_at
+      duration
+      cost
+      created_at
+    }
+  }
+}
+    `;
+
+/**
+ * __useLeadActivityLogsQuery__
+ *
+ * To run a query within a React component, call `useLeadActivityLogsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLeadActivityLogsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLeadActivityLogsQuery({
+ *   variables: {
+ *      filter: // value for 'filter'
+ *   },
+ * });
+ */
+export function useLeadActivityLogsQuery(baseOptions: Apollo.QueryHookOptions<LeadActivityLogsQuery, LeadActivityLogsQueryVariables> & ({ variables: LeadActivityLogsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LeadActivityLogsQuery, LeadActivityLogsQueryVariables>(LeadActivityLogsDocument, options);
+      }
+export function useLeadActivityLogsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LeadActivityLogsQuery, LeadActivityLogsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LeadActivityLogsQuery, LeadActivityLogsQueryVariables>(LeadActivityLogsDocument, options);
+        }
+export function useLeadActivityLogsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<LeadActivityLogsQuery, LeadActivityLogsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<LeadActivityLogsQuery, LeadActivityLogsQueryVariables>(LeadActivityLogsDocument, options);
+        }
+export type LeadActivityLogsQueryHookResult = ReturnType<typeof useLeadActivityLogsQuery>;
+export type LeadActivityLogsLazyQueryHookResult = ReturnType<typeof useLeadActivityLogsLazyQuery>;
+export type LeadActivityLogsSuspenseQueryHookResult = ReturnType<typeof useLeadActivityLogsSuspenseQuery>;
+export type LeadActivityLogsQueryResult = Apollo.QueryResult<LeadActivityLogsQuery, LeadActivityLogsQueryVariables>;
 export const RegisterDocument = gql`
     mutation Register($data: RegisterInput!) {
   register(data: $data) {
@@ -522,6 +842,140 @@ export type FetchBillingDataQueryHookResult = ReturnType<typeof useFetchBillingD
 export type FetchBillingDataLazyQueryHookResult = ReturnType<typeof useFetchBillingDataLazyQuery>;
 export type FetchBillingDataSuspenseQueryHookResult = ReturnType<typeof useFetchBillingDataSuspenseQuery>;
 export type FetchBillingDataQueryResult = Apollo.QueryResult<FetchBillingDataQuery, FetchBillingDataQueryVariables>;
+export const CadenceTemplatesDocument = gql`
+    query CadenceTemplates {
+  cadenceTemplates {
+    userError {
+      message
+    }
+    templates {
+      id
+      name
+      retry_dispositions
+      cadence_days
+      created_at
+      campaigns {
+        id
+        name
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useCadenceTemplatesQuery__
+ *
+ * To run a query within a React component, call `useCadenceTemplatesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCadenceTemplatesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCadenceTemplatesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useCadenceTemplatesQuery(baseOptions?: Apollo.QueryHookOptions<CadenceTemplatesQuery, CadenceTemplatesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CadenceTemplatesQuery, CadenceTemplatesQueryVariables>(CadenceTemplatesDocument, options);
+      }
+export function useCadenceTemplatesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CadenceTemplatesQuery, CadenceTemplatesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CadenceTemplatesQuery, CadenceTemplatesQueryVariables>(CadenceTemplatesDocument, options);
+        }
+export function useCadenceTemplatesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CadenceTemplatesQuery, CadenceTemplatesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<CadenceTemplatesQuery, CadenceTemplatesQueryVariables>(CadenceTemplatesDocument, options);
+        }
+export type CadenceTemplatesQueryHookResult = ReturnType<typeof useCadenceTemplatesQuery>;
+export type CadenceTemplatesLazyQueryHookResult = ReturnType<typeof useCadenceTemplatesLazyQuery>;
+export type CadenceTemplatesSuspenseQueryHookResult = ReturnType<typeof useCadenceTemplatesSuspenseQuery>;
+export type CadenceTemplatesQueryResult = Apollo.QueryResult<CadenceTemplatesQuery, CadenceTemplatesQueryVariables>;
+export const CreateCadenceTemplateDocument = gql`
+    mutation CreateCadenceTemplate($input: CreateCadenceTemplateInput!) {
+  createCadenceTemplate(input: $input) {
+    userError {
+      message
+    }
+    template {
+      id
+      name
+      retry_dispositions
+      cadence_days
+      created_at
+      campaigns {
+        id
+        name
+      }
+    }
+  }
+}
+    `;
+export type CreateCadenceTemplateMutationFn = Apollo.MutationFunction<CreateCadenceTemplateMutation, CreateCadenceTemplateMutationVariables>;
+
+/**
+ * __useCreateCadenceTemplateMutation__
+ *
+ * To run a mutation, you first call `useCreateCadenceTemplateMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateCadenceTemplateMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createCadenceTemplateMutation, { data, loading, error }] = useCreateCadenceTemplateMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateCadenceTemplateMutation(baseOptions?: Apollo.MutationHookOptions<CreateCadenceTemplateMutation, CreateCadenceTemplateMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateCadenceTemplateMutation, CreateCadenceTemplateMutationVariables>(CreateCadenceTemplateDocument, options);
+      }
+export type CreateCadenceTemplateMutationHookResult = ReturnType<typeof useCreateCadenceTemplateMutation>;
+export type CreateCadenceTemplateMutationResult = Apollo.MutationResult<CreateCadenceTemplateMutation>;
+export type CreateCadenceTemplateMutationOptions = Apollo.BaseMutationOptions<CreateCadenceTemplateMutation, CreateCadenceTemplateMutationVariables>;
+export const DeleteCadenceTemplateDocument = gql`
+    mutation DeleteCadenceTemplate($id: String!) {
+  deleteCadenceTemplate(id: $id) {
+    userError {
+      message
+    }
+    success
+  }
+}
+    `;
+export type DeleteCadenceTemplateMutationFn = Apollo.MutationFunction<DeleteCadenceTemplateMutation, DeleteCadenceTemplateMutationVariables>;
+
+/**
+ * __useDeleteCadenceTemplateMutation__
+ *
+ * To run a mutation, you first call `useDeleteCadenceTemplateMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteCadenceTemplateMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteCadenceTemplateMutation, { data, loading, error }] = useDeleteCadenceTemplateMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteCadenceTemplateMutation(baseOptions?: Apollo.MutationHookOptions<DeleteCadenceTemplateMutation, DeleteCadenceTemplateMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteCadenceTemplateMutation, DeleteCadenceTemplateMutationVariables>(DeleteCadenceTemplateDocument, options);
+      }
+export type DeleteCadenceTemplateMutationHookResult = ReturnType<typeof useDeleteCadenceTemplateMutation>;
+export type DeleteCadenceTemplateMutationResult = Apollo.MutationResult<DeleteCadenceTemplateMutation>;
+export type DeleteCadenceTemplateMutationOptions = Apollo.BaseMutationOptions<DeleteCadenceTemplateMutation, DeleteCadenceTemplateMutationVariables>;
 export const FetchCampaignsDocument = gql`
     query FetchCampaigns($userId: String!) {
   fetchCampaigns(userId: $userId) {
@@ -543,6 +997,10 @@ export const FetchCampaignsDocument = gql`
       cost
       user_id
       created_at
+      cadence_template {
+        id
+        name
+      }
     }
   }
 }
@@ -603,7 +1061,7 @@ export const FetchLeadsForCampaignDocument = gql`
       recordingUrl
       created_at
       campaign_id
-      initiated
+      initiated_at
     }
   }
 }
@@ -665,6 +1123,14 @@ export const FetchCampaignByIdDocument = gql`
       cost
       user_id
       created_at
+      cadence_template_id
+      cadence_start_date
+      cadence_stopped
+      cadence_completed
+      cadence_template {
+        id
+        name
+      }
     }
   }
 }
@@ -837,8 +1303,13 @@ export type CreateCampaignMutationHookResult = ReturnType<typeof useCreateCampai
 export type CreateCampaignMutationResult = Apollo.MutationResult<CreateCampaignMutation>;
 export type CreateCampaignMutationOptions = Apollo.BaseMutationOptions<CreateCampaignMutation, CreateCampaignMutationVariables>;
 export const AddLeadsToCampaignDocument = gql`
-    mutation AddLeadsToCampaign($campaignId: String!, $leads: [LeadInput!]!) {
-  addLeadsToCampaign(campaignId: $campaignId, leads: $leads) {
+    mutation AddLeadsToCampaign($campaignId: String!, $leads: [LeadInput!]!, $cadenceId: String, $cadenceStartDate: DateTime) {
+  addLeadsToCampaign(
+    campaignId: $campaignId
+    leads: $leads
+    cadenceId: $cadenceId
+    cadenceStartDate: $cadenceStartDate
+  ) {
     userError {
       message
     }
@@ -867,6 +1338,8 @@ export type AddLeadsToCampaignMutationFn = Apollo.MutationFunction<AddLeadsToCam
  *   variables: {
  *      campaignId: // value for 'campaignId'
  *      leads: // value for 'leads'
+ *      cadenceId: // value for 'cadenceId'
+ *      cadenceStartDate: // value for 'cadenceStartDate'
  *   },
  * });
  */
@@ -950,6 +1423,190 @@ export function useStopCampaignJobMutation(baseOptions?: Apollo.MutationHookOpti
 export type StopCampaignJobMutationHookResult = ReturnType<typeof useStopCampaignJobMutation>;
 export type StopCampaignJobMutationResult = Apollo.MutationResult<StopCampaignJobMutation>;
 export type StopCampaignJobMutationOptions = Apollo.BaseMutationOptions<StopCampaignJobMutation, StopCampaignJobMutationVariables>;
+export const AttachCadenceToCampaignDocument = gql`
+    mutation AttachCadenceToCampaign($input: AttachCadenceInput!) {
+  attachCadenceToCampaign(input: $input) {
+    userError {
+      message
+    }
+    success
+  }
+}
+    `;
+export type AttachCadenceToCampaignMutationFn = Apollo.MutationFunction<AttachCadenceToCampaignMutation, AttachCadenceToCampaignMutationVariables>;
+
+/**
+ * __useAttachCadenceToCampaignMutation__
+ *
+ * To run a mutation, you first call `useAttachCadenceToCampaignMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAttachCadenceToCampaignMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [attachCadenceToCampaignMutation, { data, loading, error }] = useAttachCadenceToCampaignMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useAttachCadenceToCampaignMutation(baseOptions?: Apollo.MutationHookOptions<AttachCadenceToCampaignMutation, AttachCadenceToCampaignMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AttachCadenceToCampaignMutation, AttachCadenceToCampaignMutationVariables>(AttachCadenceToCampaignDocument, options);
+      }
+export type AttachCadenceToCampaignMutationHookResult = ReturnType<typeof useAttachCadenceToCampaignMutation>;
+export type AttachCadenceToCampaignMutationResult = Apollo.MutationResult<AttachCadenceToCampaignMutation>;
+export type AttachCadenceToCampaignMutationOptions = Apollo.BaseMutationOptions<AttachCadenceToCampaignMutation, AttachCadenceToCampaignMutationVariables>;
+export const StopCadenceDocument = gql`
+    mutation StopCadence($campaignId: String!) {
+  stopCadence(campaignId: $campaignId) {
+    userError {
+      message
+    }
+    success
+  }
+}
+    `;
+export type StopCadenceMutationFn = Apollo.MutationFunction<StopCadenceMutation, StopCadenceMutationVariables>;
+
+/**
+ * __useStopCadenceMutation__
+ *
+ * To run a mutation, you first call `useStopCadenceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useStopCadenceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [stopCadenceMutation, { data, loading, error }] = useStopCadenceMutation({
+ *   variables: {
+ *      campaignId: // value for 'campaignId'
+ *   },
+ * });
+ */
+export function useStopCadenceMutation(baseOptions?: Apollo.MutationHookOptions<StopCadenceMutation, StopCadenceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<StopCadenceMutation, StopCadenceMutationVariables>(StopCadenceDocument, options);
+      }
+export type StopCadenceMutationHookResult = ReturnType<typeof useStopCadenceMutation>;
+export type StopCadenceMutationResult = Apollo.MutationResult<StopCadenceMutation>;
+export type StopCadenceMutationOptions = Apollo.BaseMutationOptions<StopCadenceMutation, StopCadenceMutationVariables>;
+export const UpdateCampaignDocument = gql`
+    mutation UpdateCampaign($input: UpdateCampaignInput!) {
+  updateCampaign(input: $input) {
+    success
+    userError {
+      message
+    }
+    campaign {
+      id
+      name
+      file_name
+      status
+      execution_status
+      leads_count
+      completed
+      in_progress
+      remaining
+      failed
+      duration
+      cost
+      user_id
+      created_at
+      cadence_template_id
+      cadence_start_date
+      cadence_stopped
+      cadence_completed
+      cadence_template {
+        id
+        name
+      }
+    }
+  }
+}
+    `;
+export type UpdateCampaignMutationFn = Apollo.MutationFunction<UpdateCampaignMutation, UpdateCampaignMutationVariables>;
+
+/**
+ * __useUpdateCampaignMutation__
+ *
+ * To run a mutation, you first call `useUpdateCampaignMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateCampaignMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateCampaignMutation, { data, loading, error }] = useUpdateCampaignMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateCampaignMutation(baseOptions?: Apollo.MutationHookOptions<UpdateCampaignMutation, UpdateCampaignMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateCampaignMutation, UpdateCampaignMutationVariables>(UpdateCampaignDocument, options);
+      }
+export type UpdateCampaignMutationHookResult = ReturnType<typeof useUpdateCampaignMutation>;
+export type UpdateCampaignMutationResult = Apollo.MutationResult<UpdateCampaignMutation>;
+export type UpdateCampaignMutationOptions = Apollo.BaseMutationOptions<UpdateCampaignMutation, UpdateCampaignMutationVariables>;
+export const FetchDashboardStatsDocument = gql`
+    query FetchDashboardStats($userId: String!, $startDate: String, $endDate: String) {
+  fetchDashboardStats(userId: $userId, startDate: $startDate, endDate: $endDate) {
+    userError {
+      message
+    }
+    data {
+      completed
+      inProgress
+      remaining
+      failed
+      totalDuration
+      totalCost
+    }
+  }
+}
+    `;
+
+/**
+ * __useFetchDashboardStatsQuery__
+ *
+ * To run a query within a React component, call `useFetchDashboardStatsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useFetchDashboardStatsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useFetchDashboardStatsQuery({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *      startDate: // value for 'startDate'
+ *      endDate: // value for 'endDate'
+ *   },
+ * });
+ */
+export function useFetchDashboardStatsQuery(baseOptions: Apollo.QueryHookOptions<FetchDashboardStatsQuery, FetchDashboardStatsQueryVariables> & ({ variables: FetchDashboardStatsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<FetchDashboardStatsQuery, FetchDashboardStatsQueryVariables>(FetchDashboardStatsDocument, options);
+      }
+export function useFetchDashboardStatsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<FetchDashboardStatsQuery, FetchDashboardStatsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<FetchDashboardStatsQuery, FetchDashboardStatsQueryVariables>(FetchDashboardStatsDocument, options);
+        }
+export function useFetchDashboardStatsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<FetchDashboardStatsQuery, FetchDashboardStatsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<FetchDashboardStatsQuery, FetchDashboardStatsQueryVariables>(FetchDashboardStatsDocument, options);
+        }
+export type FetchDashboardStatsQueryHookResult = ReturnType<typeof useFetchDashboardStatsQuery>;
+export type FetchDashboardStatsLazyQueryHookResult = ReturnType<typeof useFetchDashboardStatsLazyQuery>;
+export type FetchDashboardStatsSuspenseQueryHookResult = ReturnType<typeof useFetchDashboardStatsSuspenseQuery>;
+export type FetchDashboardStatsQueryResult = Apollo.QueryResult<FetchDashboardStatsQuery, FetchDashboardStatsQueryVariables>;
 export const GetMultipleAvailablePhoneIdsDocument = gql`
     query GetMultipleAvailablePhoneIds($count: Int!) {
   getMultipleAvailablePhoneIds(count: $count)
@@ -988,3 +1645,34 @@ export type GetMultipleAvailablePhoneIdsQueryHookResult = ReturnType<typeof useG
 export type GetMultipleAvailablePhoneIdsLazyQueryHookResult = ReturnType<typeof useGetMultipleAvailablePhoneIdsLazyQuery>;
 export type GetMultipleAvailablePhoneIdsSuspenseQueryHookResult = ReturnType<typeof useGetMultipleAvailablePhoneIdsSuspenseQuery>;
 export type GetMultipleAvailablePhoneIdsQueryResult = Apollo.QueryResult<GetMultipleAvailablePhoneIdsQuery, GetMultipleAvailablePhoneIdsQueryVariables>;
+export const CreatePhoneIdsDocument = gql`
+    mutation CreatePhoneIds($phoneIds: [String!]!) {
+  createPhoneIds(phoneIds: $phoneIds)
+}
+    `;
+export type CreatePhoneIdsMutationFn = Apollo.MutationFunction<CreatePhoneIdsMutation, CreatePhoneIdsMutationVariables>;
+
+/**
+ * __useCreatePhoneIdsMutation__
+ *
+ * To run a mutation, you first call `useCreatePhoneIdsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreatePhoneIdsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createPhoneIdsMutation, { data, loading, error }] = useCreatePhoneIdsMutation({
+ *   variables: {
+ *      phoneIds: // value for 'phoneIds'
+ *   },
+ * });
+ */
+export function useCreatePhoneIdsMutation(baseOptions?: Apollo.MutationHookOptions<CreatePhoneIdsMutation, CreatePhoneIdsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreatePhoneIdsMutation, CreatePhoneIdsMutationVariables>(CreatePhoneIdsDocument, options);
+      }
+export type CreatePhoneIdsMutationHookResult = ReturnType<typeof useCreatePhoneIdsMutation>;
+export type CreatePhoneIdsMutationResult = Apollo.MutationResult<CreatePhoneIdsMutation>;
+export type CreatePhoneIdsMutationOptions = Apollo.BaseMutationOptions<CreatePhoneIdsMutation, CreatePhoneIdsMutationVariables>;

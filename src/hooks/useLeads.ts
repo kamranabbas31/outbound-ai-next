@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useFetchCampaignStatsLazyQuery } from "@/generated/graphql";
+import { useFetchCampaignStatsLazyQuery, useFetchDashboardStatsLazyQuery } from "@/generated/graphql";
 
 export interface Lead {
   id: string;
@@ -27,9 +27,14 @@ export interface LeadStats {
 export const useLeads = (
   isViewingCampaign: boolean,
   isDashboardInitialized: boolean,
-  campaignId: string | null | undefined
+  campaignId: string | null | undefined,
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+  userId: string | undefined
+
 ) => {
   const [loadStats, { data, error }] = useFetchCampaignStatsLazyQuery();
+  const [loadDashboardStats] = useFetchDashboardStatsLazyQuery();
   const [stats, setStats] = useState<LeadStats>({
     completed: 0,
     inProgress: 0,
@@ -38,6 +43,7 @@ export const useLeads = (
     totalDuration: 0,
     totalCost: 0,
   });
+
 
   // Fetch initial campaign stats
   useEffect(() => {
@@ -75,6 +81,7 @@ export const useLeads = (
     }
   };
   const resetDashboardData = () => {
+
     setStats({
       completed: 0,
       inProgress: 0,
@@ -85,9 +92,45 @@ export const useLeads = (
     });
   };
 
+  const resetDashboardStats = async () => {
+
+
+    try {
+      const response = await loadDashboardStats({
+        variables: {
+          userId: userId ?? "",
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        },
+      });
+
+      const userError = response.data?.fetchDashboardStats?.userError;
+      const statsData = response.data?.fetchDashboardStats?.data;
+
+      if (userError) {
+        console.error("User error:", userError.message);
+        return;
+      }
+
+      if (statsData) {
+        setStats({
+          completed: statsData.completed ?? 0,
+          inProgress: statsData.inProgress ?? 0,
+          remaining: statsData.remaining ?? 0,
+          failed: statsData.failed ?? 0,
+          totalDuration: statsData.totalDuration ?? 0,
+          totalCost: statsData.totalCost ?? 0,
+        });
+      }
+    } catch (err) {
+      console.error("GraphQL error in resetDashboardStats:", err);
+    }
+
+  };
   return {
     stats,
     setStats,
     resetDashboardData,
+    resetDashboardStats
   };
 };

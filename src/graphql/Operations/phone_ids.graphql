@@ -1,3 +1,7 @@
 query GetMultipleAvailablePhoneIds($count: Int!) {
   getMultipleAvailablePhoneIds(count: $count)
 }
+
+mutation CreatePhoneIds($phoneIds: [String!]!) {
+  createPhoneIds(phoneIds: $phoneIds)
+}

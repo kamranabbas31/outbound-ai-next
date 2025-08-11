@@ -1,0 +1,19 @@
+query LeadActivityLogs($filter: LeadActivityLogFilterInput!) {
+  leadActivityLogs(filter: $filter) {
+    userError {
+      message
+    }
+    data {
+      id
+      lead_id
+      campaign_id
+      activity_type
+      from_disposition
+      to_disposition
+      disposition_at
+      duration
+      cost
+      created_at
+    }
+  }
+}

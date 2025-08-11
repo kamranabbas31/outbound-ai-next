@@ -1,0 +1,15 @@
+query FetchDashboardStats($userId: String!, $startDate: String, $endDate: String) {
+  fetchDashboardStats(userId: $userId, startDate: $startDate, endDate: $endDate) {
+    userError {
+      message
+    }
+    data {
+      completed
+      inProgress
+      remaining
+      failed
+      totalDuration
+      totalCost
+    }
+  }
+}

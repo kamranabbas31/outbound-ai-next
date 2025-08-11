@@ -15,6 +15,7 @@ interface StatsGridProps {
 }
 
 const StatsGrid: FC<StatsGridProps> = ({ stats }) => {
+  console.log({ stats })
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -39,6 +39,23 @@ const ControlsSection: FC<ControlsSectionProps> = ({
   setCurrentCampaignId,
   setShowUploadDialog,
 }) => {
+  const formatDateTime = (dateString: string | null | undefined): string => {
+    if (!dateString) return "-";
+
+    const timestamp = Number(dateString);
+    if (isNaN(timestamp)) return "-";
+
+    const date = new Date(timestamp);
+    return date.toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
   if (isViewingCampaign) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -130,9 +147,7 @@ const ControlsSection: FC<ControlsSectionProps> = ({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Created:</span>
               <span className="font-medium">
-                {activeCampaign
-                  ? new Date(Number(activeCampaign.created_at)).toLocaleString()
-                  : "-"}
+                {formatDateTime(activeCampaign?.created_at)}
               </span>
             </div>
             <div className="flex justify-between">

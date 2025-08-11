@@ -22,6 +22,10 @@ query FetchCampaigns($userId: String!) {
       cost
       user_id
       created_at
+      cadence_template {
+        id
+        name
+      }
     }
   }
 }
@@ -53,7 +57,7 @@ query FetchLeadsForCampaign(
       recordingUrl
       created_at
       campaign_id
-      initiated
+      initiated_at
     }
   }
 }
@@ -78,6 +82,14 @@ query FetchCampaignById($campaignId: ID!) {
       cost
       user_id
       created_at
+      cadence_template_id
+      cadence_start_date
+      cadence_stopped
+      cadence_completed
+      cadence_template {
+        id
+        name
+      }
     }
   }
 }
@@ -127,8 +139,18 @@ mutation CreateCampaign($campaignName: String!, $userId: String!) {
   }
 }
 
-mutation AddLeadsToCampaign($campaignId: String!, $leads: [LeadInput!]!) {
-  addLeadsToCampaign(campaignId: $campaignId, leads: $leads) {
+mutation AddLeadsToCampaign(
+  $campaignId: String!
+  $leads: [LeadInput!]!
+  $cadenceId: String
+  $cadenceStartDate: DateTime
+) {
+  addLeadsToCampaign(
+    campaignId: $campaignId
+    leads: $leads
+    cadenceId: $cadenceId
+    cadenceStartDate: $cadenceStartDate
+  ) {
     userError {
       message
     }
@@ -156,5 +178,55 @@ mutation StopCampaignJob($campaignId: String!) {
       message
     }
     success
+  }
+}
+mutation AttachCadenceToCampaign($input: AttachCadenceInput!) {
+  attachCadenceToCampaign(input: $input) {
+    userError {
+      message
+    }
+    success
+  }
+}
+
+mutation StopCadence($campaignId: String!) {
+  stopCadence(campaignId: $campaignId) {
+    userError {
+      message
+    }
+    success
+  }
+}
+
+mutation UpdateCampaign($input: UpdateCampaignInput!) {
+  updateCampaign(input: $input) {
+    success
+    userError {
+      message
+    }
+    campaign {
+      id
+      name
+      file_name
+      status
+      execution_status
+      leads_count
+      completed
+      in_progress
+      remaining
+      failed
+      duration
+      cost
+      user_id
+      created_at
+      cadence_template_id
+      cadence_start_date
+      cadence_stopped
+      cadence_completed
+      cadence_template {
+        id
+        name
+      }
+    }
   }
 }

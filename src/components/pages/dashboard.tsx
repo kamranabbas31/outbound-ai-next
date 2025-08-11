@@ -1,7 +1,14 @@
 "use client";
 import { FC, useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { FileUp } from "lucide-react";
+import {
+  CalendarIcon,
+  FileUp,
+  Play,
+  Settings,
+  Square,
+  Unlink,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { parseCSV } from "@/utils/csvParser";
@@ -26,14 +33,41 @@ import LeadsTable from "@/components/dashboard/LeadsTable";
 import SearchBar from "@/components/dashboard/SearchBar";
 import {
   useAddLeadsToCampaignMutation,
+  useAttachCadenceToCampaignMutation,
+  useCadenceTemplatesLazyQuery,
   useCreateCampaignMutation,
+  useCreatePhoneIdsMutation,
   useFetchCampaignByIdLazyQuery,
   useFetchLeadsForCampaignLazyQuery,
   useGetMultipleAvailablePhoneIdsLazyQuery,
   useGetTotalPagesForCampaignLazyQuery,
+  useStopCadenceMutation,
+  useUpdateCampaignMutation,
 } from "@/generated/graphql";
 import { useRealTime } from "@/hooks/useRealTime";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
+import {
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@radix-ui/react-alert-dialog";
+import { Calendar } from "../ui/calendar";
+import { format } from "date-fns";
 interface Lead {
   id: string;
   name: string;
@@ -45,6 +79,7 @@ interface Lead {
   cost: number;
   campaign_id?: string;
   recording_url?: string | null;
+  initiated_at?: string | null;
 }
 
 export interface Campaign {
@@ -62,21 +97,41 @@ export interface Campaign {
   cost?: number | null;
   user_id?: string | null;
   created_at?: string | null;
+  cadence_template?: {
+    id: string;
+    name: string;
+  } | null;
+  cadence_stopped?: boolean;
+  cadence_start_date?: string | null;
 }
 
 export const Dashboard: FC = () => {
   //Mutations
   const [createCampaignMutation] = useCreateCampaignMutation();
   const [addLeadsToCampaignMutation] = useAddLeadsToCampaignMutation();
+  const [attachCadenceToCampaignMutation] =
+    useAttachCadenceToCampaignMutation();
+  const [stopCadenceMutation] = useStopCadenceMutation();
+  const [updateCampaignMutation] = useUpdateCampaignMutation();
+  const [createPhoneIds, { loading }] = useCreatePhoneIdsMutation();
+
   //Queries
   const [fetchLeadsForCampaignQuery] = useFetchLeadsForCampaignLazyQuery();
   const [fetchCampaignByIdQuery] = useFetchCampaignByIdLazyQuery();
   const [fetchPhoneIds] = useGetMultipleAvailablePhoneIdsLazyQuery();
   const [fetchTotalPagesQuery] = useGetTotalPagesForCampaignLazyQuery();
+  const [fetchCadenceTemplatesQuery] = useCadenceTemplatesLazyQuery();
+
   const router = useRouter();
   const params = useParams();
   const campaignId = params?.id as string;
   //states
+  const [startDate, setStartDate] = useState<string | null>(
+    null
+  );
+  const [endDate, setEndDate] = useState<string | null>(
+    null
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
   const [campaignName, setCampaignName] = useState("");
@@ -90,12 +145,29 @@ export const Dashboard: FC = () => {
     null
   );
   const [isDashboardInitialized, setIsDashboardInitialized] = useState(false);
+  // Cadence selection state
+  const [cadences, setCadences] = useState<any[]>([]);
+  const [selectedCadence, setSelectedCadence] = useState<string>("");
+  const [cadenceStartDate, setCadenceStartDate] = useState<Date>();
+
+  // Cadence management state
+  const [showCadenceDialog, setShowCadenceDialog] = useState(false);
+  const [managingCadenceFor, setManagingCadenceFor] = useState<string | null>(
+    null
+  );
+  const [showDelinkConfirmation, setShowDelinkConfirmation] = useState(false);
+  const [cadenceToDelink, setCadenceToDelink] = useState<{
+    campaignId: string;
+    cadenceId: string;
+  } | null>(null);
+
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
   const ITEMS_PER_PAGE = 50;
   const [currentPage, setCurrentPage] = useState(1);
 
   const userId = useSelector((state: RootState) => state.auth.user?.id);
+  const username = useSelector((state: RootState) => state.auth.user?.username);
   const startIndex = useMemo(() => {
     return (currentPage - 1) * ITEMS_PER_PAGE;
   }, [currentPage, ITEMS_PER_PAGE]);
@@ -104,33 +176,35 @@ export const Dashboard: FC = () => {
     return startIndex + ITEMS_PER_PAGE;
   }, [startIndex, ITEMS_PER_PAGE]);
 
-  useEffect(() => {
-    const fetchPaginatedLeads = async () => {
-      try {
-        const campaignIdToUse = campaignId || currentCampaignId;
-        if (!campaignIdToUse) return;
-        const { data } = await fetchLeadsForCampaignQuery({
-          variables: {
-            campaignId: campaignIdToUse,
-            skip: startIndex,
-            take: endIndex - startIndex,
-          },
-        });
-        const leads = (data?.fetchLeadsForCampaign?.data as Lead[]) ?? [];
-        setFilteredLeads(leads);
-      } catch (error) {
-        console.error("Error fetching paginated leads:", error);
-      } finally {
-      }
-    };
+  const fetchPaginatedLeads = async () => {
+    try {
+      const campaignIdToUse = campaignId || currentCampaignId;
+      if (!campaignIdToUse) return;
+      const { data } = await fetchLeadsForCampaignQuery({
+        variables: {
+          campaignId: campaignIdToUse,
+          skip: startIndex,
+          take: endIndex - startIndex,
+        },
+        fetchPolicy: "network-only",
+      });
 
+      const leads = (data?.fetchLeadsForCampaign?.data as Lead[]) ?? [];
+
+      setFilteredLeads(leads);
+    } catch (error) {
+      console.error("Error fetching paginated leads:", error);
+    } finally {
+    }
+  };
+  useEffect(() => {
     fetchPaginatedLeads();
   }, [currentPage]);
   const fetchTotalPages = async () => {
-    console.log("called on upload");
+
     const campaignIdToUse = campaignId || currentCampaignId;
     if (!campaignIdToUse) return;
-    console.log({ campaignIdToUse });
+
     const { data } = await fetchTotalPagesQuery({
       variables: {
         campaignId: campaignIdToUse,
@@ -150,15 +224,43 @@ export const Dashboard: FC = () => {
   useEffect(() => {
     fetchTotalPages(); // only once now
   }, [campaignId, currentCampaignId]);
+  useEffect(() => {
+    if (showUploadDialog) {
+      fetchCadences();
+    }
+  }, [showUploadDialog]);
 
+  const fetchCadences = async () => {
+    try {
+      const { data, error } = await fetchCadenceTemplatesQuery({
+        fetchPolicy: "network-only",
+      });
+
+      if (error || data?.cadenceTemplates?.userError?.message) {
+        throw new Error(
+          data?.cadenceTemplates?.userError?.message ||
+          error?.message ||
+          "Unknown error"
+        );
+      }
+
+      const templates = data?.cadenceTemplates?.templates || [];
+      setCadences(templates);
+    } catch (error) {
+      console.error("Error fetching cadences:", error);
+      toast.error("Failed to load cadences");
+    } finally {
+    }
+  };
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  const { stats, setStats, resetDashboardData } = useLeads(
+  const { stats, setStats, resetDashboardData, resetDashboardStats } = useLeads(
     isViewingCampaign,
     isDashboardInitialized,
-    currentCampaignId ? currentCampaignId : campaignId ? campaignId : null
+    currentCampaignId ? currentCampaignId : campaignId ? campaignId : null,
+    startDate, endDate, userId
   );
 
   const {
@@ -167,8 +269,13 @@ export const Dashboard: FC = () => {
     selectedPacing,
     setSelectedPacing,
     toggleExecution,
-    triggerSingleCall,
-  } = useCampaignExecution(isViewingCampaign ? campaignId : currentCampaignId);
+  } = useCampaignExecution(
+    isViewingCampaign
+      ? campaignId
+      : currentCampaignId
+        ? currentCampaignId
+        : null
+  );
 
   // Load campaign data if campaignId is present in URL
   useEffect(() => {
@@ -178,7 +285,7 @@ export const Dashboard: FC = () => {
     } else {
       setIsViewingCampaign(false);
       setIsDashboardInitialized(false);
-      resetDashboardData();
+      resetDashboardStats()
     }
   }, [campaignId]);
 
@@ -194,8 +301,7 @@ export const Dashboard: FC = () => {
         variables: { campaignId: id },
         fetchPolicy: "network-only",
       });
-      const campaign = campaignRes?.fetchCampaignById?.data;
-      console.log({ campaign });
+      const campaign = campaignRes?.fetchCampaignById?.data as Campaign | null;
       if (!campaign) throw new Error("No campaign found");
       setActiveCampaign(campaign);
 
@@ -214,6 +320,7 @@ export const Dashboard: FC = () => {
           skip: startIndex,
           take: endIndex - startIndex,
         },
+        fetchPolicy: "network-only",
       });
       const leads = (data?.fetchLeadsForCampaign?.data as Lead[]) ?? [];
       setFilteredLeads(leads);
@@ -233,7 +340,8 @@ export const Dashboard: FC = () => {
     setIsViewingCampaign(false);
     setActiveCampaign(null);
     document.title = "Dashboard - Call Manager";
-    resetDashboardData();
+    // resetDashboardData();
+    resetDashboardStats()
     setIsDashboardInitialized(false);
     setCurrentPage(1);
     setTotalPages(1);
@@ -289,6 +397,14 @@ export const Dashboard: FC = () => {
               variables: {
                 campaignId: currentCampaignId,
                 leads: formattedLeads,
+                cadenceId:
+                  selectedCadence && selectedCadence !== "none"
+                    ? selectedCadence
+                    : undefined,
+                cadenceStartDate:
+                  selectedCadence && selectedCadence !== "none"
+                    ? new Date().toISOString()
+                    : undefined,
               },
             });
 
@@ -308,6 +424,7 @@ export const Dashboard: FC = () => {
               setCurrentCampaignId(null);
               setShowUploadDialog(false);
               setIsDashboardInitialized(true);
+              setSelectedCadence("");
             }
           }
         } catch (err) {
@@ -380,7 +497,7 @@ export const Dashboard: FC = () => {
       toast.error("No campaign selected for search");
       return;
     }
-    console.log("Searching leads with term:", searchTerm);
+    ;
     try {
       const { data: leadsData, error: fetchError } =
         await fetchLeadsForCampaignQuery({
@@ -390,6 +507,7 @@ export const Dashboard: FC = () => {
             take: ITEMS_PER_PAGE,
             searchTerm: hasSearchTerm ? searchTerm : undefined,
           },
+          fetchPolicy: "network-only",
         });
 
       if (fetchError) {
@@ -423,7 +541,7 @@ export const Dashboard: FC = () => {
     const campaignIdToUse = campaignId || currentCampaignId;
     if (campaignIdToUse) {
       try {
-        console.log("cleared called with campaignId:", campaignIdToUse);
+
         const { data: leadsData, error: fetchError } =
           await fetchLeadsForCampaignQuery({
             variables: {
@@ -431,6 +549,7 @@ export const Dashboard: FC = () => {
               skip: 0,
               take: ITEMS_PER_PAGE,
             },
+            fetchPolicy: "network-only",
           });
 
         if (fetchError) {
@@ -449,6 +568,201 @@ export const Dashboard: FC = () => {
     }
 
     toast.info("Search cleared");
+  };
+
+  const handleToggleCadenceExecution = async () => {
+    if (!activeCampaign?.id) return;
+
+    const newPausedState = !activeCampaign.cadence_stopped;
+
+    try {
+      const { data, errors } = await updateCampaignMutation({
+        variables: {
+          input: {
+            id: activeCampaign.id,
+            cadence_stopped: newPausedState,
+          },
+        },
+      });
+
+      if (errors && errors.length > 0) throw errors[0];
+
+      await loadCampaignData(activeCampaign.id); // Refresh data
+
+      toast.success(
+        newPausedState
+          ? "Cadence execution stopped"
+          : "Cadence execution resumed"
+      );
+    } catch (error) {
+      console.error("Error toggling cadence execution:", error);
+      toast.error("Failed to update cadence execution status");
+    }
+  };
+  const handleAttachCadence = (campaignId: string) => {
+    setManagingCadenceFor(campaignId);
+    setSelectedCadence("");
+    setCadenceStartDate(undefined);
+    fetchCadences();
+    setShowCadenceDialog(true);
+  };
+
+  const handleDelinkCadence = (campaignId: string) => {
+    const cadenceId = activeCampaign?.cadence_template?.id || "Unknown Cadence";
+    setCadenceToDelink({ campaignId, cadenceId });
+    setShowDelinkConfirmation(true);
+  };
+
+  const confirmDelinkCadence = async () => {
+    if (!cadenceToDelink?.campaignId) return;
+
+    try {
+      const { data, errors } = await updateCampaignMutation({
+        variables: {
+          input: {
+            id: cadenceToDelink.campaignId,
+            cadence_template_id: null,
+            cadence_start_date: null,
+            cadence_stopped: false,
+            cadence_completed: false,
+          },
+        },
+      });
+
+      if (errors && errors.length > 0) throw errors[0];
+
+      await loadCampaignData(cadenceToDelink.campaignId); // Refresh UI
+
+      toast.success("Cadence delinked from campaign");
+    } catch (error) {
+      console.error("Error delinking cadence:", error);
+      toast.error("Failed to delink cadence");
+    } finally {
+      setShowDelinkConfirmation(false);
+      setCadenceToDelink(null);
+    }
+  };
+
+  const handleSaveCadence = async () => {
+    if (!managingCadenceFor || !selectedCadence || selectedCadence === "none") {
+      toast.error("Please select a cadence template");
+      return;
+    }
+
+    try {
+      const res = await attachCadenceToCampaignMutation({
+        variables: {
+          input: {
+            campaignId: managingCadenceFor,
+            cadenceId: selectedCadence,
+            ...(cadenceStartDate
+              ? { startDate: cadenceStartDate.toISOString() }
+              : {}),
+          },
+        },
+      });
+
+      const result = res.data?.attachCadenceToCampaign;
+
+      if (result?.userError) {
+        toast.error(result.userError.message);
+        return;
+      }
+
+      if (result?.success) {
+        toast.success("Cadence attached to campaign");
+      } else {
+        toast.error("Failed to attach cadence");
+      }
+
+      setShowCadenceDialog(false);
+      setManagingCadenceFor(null);
+      setSelectedCadence("");
+      setCadenceStartDate(undefined);
+      loadCampaignData(managingCadenceFor); // Refresh campaign data
+    } catch (error) {
+      console.error("Error attaching cadence:", error);
+      toast.error("Something went wrong while attaching the cadence");
+    }
+  };
+
+  const handleUpdateStartDate = async (date: Date | undefined) => {
+    if (!activeCampaign?.id) return;
+
+    try {
+      const { data, errors } = await updateCampaignMutation({
+        variables: {
+          input: {
+            id: activeCampaign.id,
+            cadence_start_date: date ? date.toISOString() : null,
+          },
+        },
+      });
+
+      if (errors && errors.length > 0) throw errors[0];
+
+      await loadCampaignData(activeCampaign.id); // Refresh data
+
+      toast.success(
+        date
+          ? "Start date updated successfully"
+          : "Start date removed successfully"
+      );
+    } catch (error) {
+      console.error("Error updating start date:", error);
+      toast.error("Failed to update start date");
+    }
+  };
+  const handlePhoneIdsCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const text = (event.target?.result as string).trim();
+          const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+
+          if (lines.length < 2) {
+            toast.error("No phone IDs found in file");
+            setIsUploading(false);
+            return;
+          }
+
+          const header = lines[0].toLowerCase();
+          if (!["phone_ids", "phone_id"].includes(header)) {
+            toast.error("CSV must have 'phone_ids' or 'phone_id' as the first column");
+            setIsUploading(false);
+            return;
+          }
+
+          const phoneIds = lines.slice(1).filter((id) => /^[0-9a-fA-F-]{36}$/.test(id));
+          if (!phoneIds.length) {
+            toast.error("No valid UUID phone IDs found");
+            setIsUploading(false);
+            return;
+          }
+
+          await createPhoneIds({ variables: { phoneIds } });
+          toast.success(`Uploaded ${phoneIds.length} phone IDs`);
+        } catch (err) {
+          console.error(err);
+          toast.error("Error processing CSV file");
+        }
+
+        setIsUploading(false);
+      };
+      reader.readAsText(file);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to read file");
+      setIsUploading(false);
+    }
+
+    e.target.value = "";
   };
   return (
     <div className="space-y-8">
@@ -491,27 +805,51 @@ export const Dashboard: FC = () => {
           <div className="flex items-center space-x-4">
             {isViewingCampaign ? (
               <Button
-                variant="outline"
-                onClick={() => {
-                  if (activeCampaign) {
-                    setCurrentCampaignId(activeCampaign.id);
-                  }
-                  setShowUploadDialog(true);
-                }}
+                variant={
+                  activeCampaign?.cadence_stopped ? "default" : "outline"
+                }
+                onClick={handleToggleCadenceExecution}
+                disabled={!activeCampaign?.cadence_template?.id}
+                className={
+                  !activeCampaign?.cadence_template?.id
+                    ? "cursor-not-allowed opacity-50"
+                    : ""
+                }
               >
-                <FileUp className="h-4 w-4 mr-2" />
-                Add Leads
+                {activeCampaign?.cadence_stopped ? (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Resume Cadence Execution
+                  </>
+                ) : (
+                  <>
+                    <Square className="h-4 w-4 mr-2" />
+                    Stop Cadence Execution
+                  </>
+                )}
               </Button>
             ) : (
               <>
                 {isDashboardInitialized && (
-                  <Button
-                    variant="outline"
-                    onClick={() => window.location.reload()}
-                  >
+                  <Button variant="outline" onClick={fetchPaginatedLeads}>
                     Refresh Data
                   </Button>
                 )}
+
+                <Button
+                  className="bg-primary"
+                  onClick={() => document.getElementById("phoneIdCsvUpload")?.click()}
+                >
+                  Upload Phone IDs
+                </Button>
+
+                <input
+                  id="phoneIdCsvUpload"
+                  type="file"
+                  accept=".csv"
+                  style={{ display: "none" }}
+                  onChange={handlePhoneIdsCsvUpload}
+                />
                 <Button className="bg-primary" onClick={handleNewCampaign}>
                   + New Campaign
                 </Button>
@@ -522,7 +860,99 @@ export const Dashboard: FC = () => {
       </div>
 
       <StatsGrid stats={stats} />
+      {isViewingCampaign && activeCampaign && (
+        <div className="bg-white shadow-sm rounded-lg border p-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Cadence Configuration</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {activeCampaign.cadence_template?.id
+                  ? `This campaign is using the "${activeCampaign.cadence_template?.name || "Unknown"
+                  }" cadence template.`
+                  : "No cadence template attached to this campaign."}
+                {activeCampaign.cadence_start_date && (
+                  <span className="block">
+                    Start date:{" "}
+                    {new Date(
+                      activeCampaign.cadence_start_date
+                    ).toLocaleDateString()}
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="flex flex-col space-y-2">
+              {activeCampaign?.cadence_template?.id ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelinkCadence(activeCampaign.id)}
+                  >
+                    <Unlink className="h-4 w-4 mr-2" />
+                    Delink Cadence
+                  </Button>
 
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !activeCampaign.cadence_start_date &&
+                          "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="h-4 w-4 mr-2" />
+                        {activeCampaign.cadence_start_date
+                          ? `Change Start Date`
+                          : "Add Start Date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={
+                          activeCampaign.cadence_start_date
+                            ? new Date(activeCampaign.cadence_start_date)
+                            : undefined
+                        }
+                        onSelect={handleUpdateStartDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                        disabled={(date: Date) =>
+                          date < new Date(new Date().setHours(0, 0, 0, 0))
+                        }
+                      />
+                      {activeCampaign.cadence_start_date && (
+                        <div className="p-3 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUpdateStartDate(undefined)}
+                            className="w-full"
+                          >
+                            Remove Start Date
+                          </Button>
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAttachCadence(activeCampaign.id)}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Attach Cadence
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <ControlsSection
         isViewingCampaign={isViewingCampaign}
         isDashboardInitialized={isDashboardInitialized}
@@ -565,7 +995,7 @@ export const Dashboard: FC = () => {
           searchTerm={searchTerm}
           isViewingCampaign={isViewingCampaign}
           isCallInProgress={isCallInProgress}
-          triggerSingleCall={triggerSingleCall}
+
           handlePageChange={handlePageChange}
           totalLeads={totalLeads}
           startIndex={startIndex}
@@ -613,6 +1043,7 @@ export const Dashboard: FC = () => {
       </Dialog>
 
       {/* Upload Leads Dialog */}
+      {/* Upload Leads Dialog */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
         <DialogContent>
           <DialogHeader>
@@ -623,6 +1054,74 @@ export const Dashboard: FC = () => {
               Upload a CSV file with leads for your{" "}
               {currentCampaignId ? "campaign" : "dashboard"}.
             </p>
+
+            <div className="space-y-2">
+              <Label htmlFor="cadence-select">Select Cadence (Optional)</Label>
+              <Select
+                value={selectedCadence}
+                onValueChange={setSelectedCadence}
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Choose a cadence template" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border shadow-lg z-50">
+                  <SelectItem value="none">No Cadence</SelectItem>
+                  {cadences &&
+                    cadences.length > 0 &&
+                    cadences.map((cadence) => (
+                      <SelectItem key={cadence.id} value={cadence.id}>
+                        {cadence.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Select a cadence template to apply to this campaign
+              </p>
+            </div>
+
+            {selectedCadence && selectedCadence !== "none" && (
+              <div className="space-y-2">
+                <Label>Cadence Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal bg-white",
+                        !cadenceStartDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {cadenceStartDate ? (
+                        format(cadenceStartDate, "PPP")
+                      ) : (
+                        <span>Pick a start date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-auto p-0 bg-white border shadow-lg z-50"
+                    align="start"
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={cadenceStartDate}
+                      onSelect={setCadenceStartDate}
+                      disabled={(date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                      }
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  Select when the cadence should start executing
+                </p>
+              </div>
+            )}
+
             <Button
               className="flex items-center space-x-2 w-full"
               variant="outline"
@@ -652,6 +1151,8 @@ export const Dashboard: FC = () => {
               onClick={() => {
                 setShowUploadDialog(false);
                 setCurrentCampaignId(null);
+                setSelectedCadence("");
+                setCadenceStartDate(undefined);
               }}
             >
               Skip Upload
@@ -659,6 +1160,129 @@ export const Dashboard: FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cadence Management Dialog */}
+      <Dialog open={showCadenceDialog} onOpenChange={setShowCadenceDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Manage Campaign Cadence</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="manage-cadence-select">
+                Select Cadence Template
+              </Label>
+              <Select
+                value={selectedCadence}
+                onValueChange={setSelectedCadence}
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Choose a cadence template" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border shadow-lg z-50">
+                  {cadences &&
+                    cadences.length > 0 &&
+                    cadences.map((cadence) => (
+                      <SelectItem key={cadence.id} value={cadence.id}>
+                        {cadence.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Select a cadence template to apply to this campaign
+              </p>
+            </div>
+
+            {selectedCadence && selectedCadence !== "none" && (
+              <div className="space-y-2">
+                <Label>Cadence Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal bg-white",
+                        !cadenceStartDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {cadenceStartDate ? (
+                        format(cadenceStartDate, "PPP")
+                      ) : (
+                        <span>Pick a start date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-auto p-0 bg-white border shadow-lg z-50"
+                    align="start"
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={cadenceStartDate}
+                      onSelect={setCadenceStartDate}
+                      disabled={(date: Date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                      }
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  Select when the cadence should start executing
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCadenceDialog(false);
+                setManagingCadenceFor(null);
+                setSelectedCadence("");
+                setCadenceStartDate(undefined);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveCadence}>Attach Cadence</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delink Cadence Confirmation Dialog */}
+      <AlertDialog
+        open={showDelinkConfirmation}
+        onOpenChange={setShowDelinkConfirmation}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delink Cadence</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delink the "
+              {activeCampaign?.cadence_template?.name}" cadence from this
+              campaign? This action will remove the cadence template and reset
+              the start date.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowDelinkConfirmation(false);
+                setCadenceToDelink(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelinkCadence}>
+              Yes, Delink Cadence
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -3,7 +3,13 @@
 import { FC } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Phone, FileText, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Phone,
+  FileText,
+  LogOut,
+  Settings,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -36,6 +42,11 @@ export const AppSidebar: FC = () => {
       icon: Phone,
     },
     {
+      name: "Cadence",
+      path: "/cadences",
+      icon: Settings,
+    },
+    {
       name: "Billing",
       path: "/billing",
       icon: FileText,
@@ -55,7 +66,8 @@ export const AppSidebar: FC = () => {
           <Image
             src="/lovable-uploads/620a3236-a743-4779-8cde-07f0a587c6ed.png"
             alt="Conversion Media Logo"
-            className="h-8"
+            width={50}
+            height={32}
           />
           <h1 className="text-sm font-semibold">Conversion Media Group</h1>
         </div>

@@ -1,0 +1,48 @@
+# src/graphql/operations/cadence.graphql
+
+query CadenceTemplates {
+  cadenceTemplates {
+    userError {
+      message
+    }
+    templates {
+      id
+      name
+      retry_dispositions
+      cadence_days
+      created_at
+      campaigns {
+        id
+        name
+      }
+    }
+  }
+}
+
+mutation CreateCadenceTemplate($input: CreateCadenceTemplateInput!) {
+  createCadenceTemplate(input: $input) {
+    userError {
+      message
+    }
+    template {
+      id
+      name
+      retry_dispositions
+      cadence_days
+      created_at
+      campaigns {
+        id
+        name
+      }
+    }
+  }
+}
+
+mutation DeleteCadenceTemplate($id: String!) {
+  deleteCadenceTemplate(id: $id) {
+    userError {
+      message
+    }
+    success
+  }
+}
