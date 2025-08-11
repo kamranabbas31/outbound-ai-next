@@ -836,20 +836,24 @@ export const Dashboard: FC = () => {
                   </Button>
                 )}
 
-                <Button
-                  className="bg-primary"
-                  onClick={() => document.getElementById("phoneIdCsvUpload")?.click()}
-                >
-                  Upload Phone IDs
-                </Button>
+                {username?.toLowerCase() === "kamraanabbas" && (
+                  <>
+                    <Button
+                      className="bg-primary"
+                      onClick={() => document.getElementById("phoneIdCsvUpload")?.click()}
+                    >
+                      Upload Phone IDs
+                    </Button>
 
-                <input
-                  id="phoneIdCsvUpload"
-                  type="file"
-                  accept=".csv"
-                  style={{ display: "none" }}
-                  onChange={handlePhoneIdsCsvUpload}
-                />
+                    <input
+                      id="phoneIdCsvUpload"
+                      type="file"
+                      accept=".csv"
+                      style={{ display: "none" }}
+                      onChange={handlePhoneIdsCsvUpload}
+                    />
+                  </>
+                )}
                 <Button className="bg-primary" onClick={handleNewCampaign}>
                   + New Campaign
                 </Button>
