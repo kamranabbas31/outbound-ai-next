@@ -16,6 +16,149 @@ interface CadenceDay {
   timeWindows: string;
 }
 
+// Smart Time Window Input Component
+interface TimeWindowInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+const TimeWindowInput = ({ value, onChange, placeholder, className }: TimeWindowInputProps) => {
+  const [inputValue, setInputValue] = useState(value);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const formatTimeWindows = (digits: string): string => {
+    if (digits.length === 0) return '';
+    
+    let result = '';
+    let position = 0;
+    
+    while (position < digits.length) {
+      // Start new time window
+      if (result && !result.endsWith(', ')) {
+        result += ', ';
+      }
+      
+      // First hour (HH)
+      if (position < digits.length) {
+        let hour = parseInt(digits[position]);
+        if (hour > 2) hour = 0;
+        result += hour.toString();
+        position++;
+      }
+      
+      // Second digit of hour
+      if (position < digits.length) {
+        let hour = parseInt(digits.substring(position - 1, position + 1));
+        if (hour > 23) hour = 0;
+        result = result.substring(0, result.length - 1) + hour.toString().padStart(2, '0');
+        position++;
+      }
+      
+      // Add colon after hours
+      if (position < digits.length) {
+        result += ':';
+      }
+      
+      // First digit of minutes
+      if (position < digits.length) {
+        let minute = parseInt(digits[position]);
+        if (minute > 5) minute = 0;
+        result += minute.toString();
+        position++;
+      }
+      
+      // Second digit of minutes
+      if (position < digits.length) {
+        let minute = parseInt(digits.substring(position - 1, position + 1));
+        if (minute > 59) minute = 0;
+        result = result.substring(0, result.length - 1) + minute.toString().padStart(2, '0');
+        position++;
+      }
+      
+      // Add dash for time range
+      if (position < digits.length) {
+        result += '-';
+      }
+      
+      // Second hour (HH)
+      if (position < digits.length) {
+        let hour = parseInt(digits[position]);
+        if (hour > 2) hour = 0;
+        result += hour.toString();
+        position++;
+      }
+      
+      // Second digit of second hour
+      if (position < digits.length) {
+        let hour = parseInt(digits.substring(position - 1, position + 1));
+        if (hour > 23) hour = 0;
+        result = result.substring(0, result.length - 1) + hour.toString().padStart(2, '0');
+        position++;
+      }
+      
+      // Add colon after second hours
+      if (position < digits.length) {
+        result += ':';
+      }
+      
+      // First digit of second minutes
+      if (position < digits.length) {
+        let minute = parseInt(digits[position]);
+        if (minute > 5) minute = 0;
+        result += minute.toString();
+        position++;
+      }
+      
+      // Second digit of second minutes
+      if (position < digits.length) {
+        let minute = parseInt(digits.substring(position - 1, position + 1));
+        if (minute > 59) minute = 0;
+        result = result.substring(0, result.length - 1) + minute.toString().padStart(2, '0');
+        position++;
+      }
+    }
+    
+    return result;
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    
+    // Extract only digits
+    const digits = newValue.replace(/\D/g, '');
+    
+    // Format into time windows
+    const formatted = formatTimeWindows(digits);
+    
+    setInputValue(formatted);
+    onChange(formatted);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  return (
+    <div>
+      <Input
+        value={isFocused ? inputValue : value}
+        onChange={handleInputChange}
+        onBlur={handleBlur}
+        onFocus={handleFocus}
+        placeholder={placeholder}
+        className={className}
+      />
+    
+    </div>
+  );
+};
+
 const RETRY_DISPOSITION_OPTIONS = [
   "Answering Machine",
   "No Answer",
@@ -76,13 +219,55 @@ export default function CadenceCreator() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    let hasError = false;
     if (!cadenceName.trim()) {
-      toast.error("Please enter a cadence name");
-      return;
+      toast.error("Cadence name is required");
+      hasError = true;
+    }
+
+    if (retryDispositions.length === 0) {
+      toast.error("Please select at least one retry disposition");
+      hasError = true;
     }
 
     if (cadenceDays.length === 0) {
       toast.error("Please add at least one cadence day");
+      hasError = true;
+    }
+
+    // Check if any time windows are empty
+    const hasEmptyTimeWindows = cadenceDays.some(day => !day.timeWindows.trim());
+    if (hasEmptyTimeWindows) {
+      toast.error("Please fill in time windows for all cadence days");
+      hasError = true;
+    }
+
+    // Check if any day numbers or attempts are missing
+    const hasInvalidDays = cadenceDays.some(day => !day.day || !day.attempts);
+    if (hasInvalidDays) {
+      toast.error("Please fill in day number and attempts for all cadence days");
+      hasError = true;
+    }
+
+    // Validate time window format for each day
+    const hasInvalidTimeWindows = cadenceDays.some(day => {
+      if (!day.timeWindows.trim()) return false;
+      
+      const timeWindows = day.timeWindows.split(',').map(tw => tw.trim()).filter(tw => tw.length > 0);
+      
+      return timeWindows.some(timeWindow => {
+        // Check if time window follows HH:MM-HH:MM format
+        const timePattern = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
+        return !timePattern.test(timeWindow);
+      });
+    });
+
+    if (hasInvalidTimeWindows) {
+      toast.error("Each time window must be in proper format (HH:MM-HH:MM). Complete all time windows before saving.");
+      hasError = true;
+    }
+
+    if (hasError) {
       return;
     }
 
@@ -161,7 +346,7 @@ export default function CadenceCreator() {
           {/* Retry Dispositions */}
           <Card>
             <CardHeader>
-              <CardTitle>Retry Dispositions</CardTitle>
+              <CardTitle>Retry Dispositions <span className="text-red-500">*</span></CardTitle>
               <p className="text-sm text-muted-foreground">
                 Only retry leads with these call outcomes
               </p>
@@ -209,7 +394,7 @@ export default function CadenceCreator() {
                   >
                     <div className="flex-1">
                       <Label className="text-xs text-muted-foreground">
-                        Day Number
+                        Day Number <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         type="number"
@@ -224,11 +409,12 @@ export default function CadenceCreator() {
                           )
                         }
                         className="mt-1"
+                        required
                       />
                     </div>
                     <div className="flex-1">
                       <Label className="text-xs text-muted-foreground">
-                        Attempts
+                        Attempts <span className="text-red-500">*</span>
                       </Label>
                       <Input
                         type="number"
@@ -242,17 +428,16 @@ export default function CadenceCreator() {
                           )
                         }
                         className="mt-1"
+                        required
                       />
                     </div>
                     <div className="flex-2">
                       <Label className="text-xs text-muted-foreground">
-                        Time Windows
+                        Time Windows <span className="text-red-500">*</span>
                       </Label>
-                      <Input
+                      <TimeWindowInput
                         value={day.timeWindows}
-                        onChange={(e) =>
-                          updateCadenceDay(index, "timeWindows", e.target.value)
-                        }
+                        onChange={(value) => updateCadenceDay(index, "timeWindows", value)}
                         placeholder="10:00–12:00, 14:00–16:00"
                         className="mt-1"
                       />

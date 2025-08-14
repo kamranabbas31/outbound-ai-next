@@ -126,12 +126,6 @@ export const Dashboard: FC = () => {
   const params = useParams();
   const campaignId = params?.id as string;
   //states
-  const [startDate, setStartDate] = useState<string | null>(
-    null
-  );
-  const [endDate, setEndDate] = useState<string | null>(
-    null
-  );
   const [isUploading, setIsUploading] = useState(false);
   const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
   const [campaignName, setCampaignName] = useState("");
@@ -165,6 +159,26 @@ export const Dashboard: FC = () => {
   const [totalLeads, setTotalLeads] = useState(0);
   const ITEMS_PER_PAGE = 50;
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Date range states
+  const [startDate, setStartDate] = useState<string | null>(null);
+  const [endDate, setEndDate] = useState<string | null>(null);
+
+  // Initialize default date range to last 30 days
+  useEffect(() => {
+    // Only set default dates if they haven't been set yet
+    if (!startDate && !endDate) {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      
+      const defaultStart = start.toISOString().split('T')[0];
+      const defaultEnd = end.toISOString().split('T')[0];
+      
+      setStartDate(defaultStart);
+      setEndDate(defaultEnd);
+    }
+  }, []); // Empty dependency array - only run once on mount
 
   const userId = useSelector((state: RootState) => state.auth.user?.id);
   const username = useSelector((state: RootState) => state.auth.user?.username);
@@ -957,6 +971,7 @@ export const Dashboard: FC = () => {
           </div>
         </div>
       )}
+      
       <ControlsSection
         isViewingCampaign={isViewingCampaign}
         isDashboardInitialized={isDashboardInitialized}
@@ -999,12 +1014,12 @@ export const Dashboard: FC = () => {
           searchTerm={searchTerm}
           isViewingCampaign={isViewingCampaign}
           isCallInProgress={isCallInProgress}
-
           handlePageChange={handlePageChange}
           totalLeads={totalLeads}
           startIndex={startIndex}
           endIndex={endIndex}
           ITEMS_PER_PAGE={ITEMS_PER_PAGE!}
+          cadenceAttached={activeCampaign?.cadence_template?.id ? true : false}  
         />
       </div>
 
@@ -1059,7 +1074,7 @@ export const Dashboard: FC = () => {
               {currentCampaignId ? "campaign" : "dashboard"}.
             </p>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label htmlFor="cadence-select">Select Cadence (Optional)</Label>
               <Select
                 value={selectedCadence}
@@ -1082,9 +1097,9 @@ export const Dashboard: FC = () => {
               <p className="text-xs text-muted-foreground">
                 Select a cadence template to apply to this campaign
               </p>
-            </div>
+            </div> */}
 
-            {selectedCadence && selectedCadence !== "none" && (
+            {/* {selectedCadence && selectedCadence !== "none" && (
               <div className="space-y-2">
                 <Label>Cadence Start Date</Label>
                 <Popover>
@@ -1124,7 +1139,7 @@ export const Dashboard: FC = () => {
                   Select when the cadence should start executing
                 </p>
               </div>
-            )}
+            )} */}
 
             <Button
               className="flex items-center space-x-2 w-full"

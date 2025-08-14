@@ -8,6 +8,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Campaign } from "../pages/dashboard";
 
 interface ControlsSectionProps {
@@ -56,6 +62,23 @@ const ControlsSection: FC<ControlsSectionProps> = ({
       hour12: true,
     });
   };
+
+  // Debug logging for date comparison
+  if (activeCampaign?.cadence_template?.id && activeCampaign?.cadence_start_date) {
+    const startDate = new Date(activeCampaign.cadence_start_date);
+    const currentDate = new Date();
+    const startDateNoTime = startDate.setHours(0, 0, 0, 0);
+    const currentDateNoTime = currentDate.setHours(0, 0, 0, 0);
+    
+    console.log('Debug Date Comparison:', {
+      originalStartDate: activeCampaign.cadence_start_date,
+      parsedStartDate: startDate,
+      startDateNoTime: startDateNoTime,
+      currentDate: currentDate,
+      currentDateNoTime: currentDateNoTime,
+      isDisabled: startDateNoTime <= currentDateNoTime
+    });
+  }
   if (isViewingCampaign) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -65,41 +88,72 @@ const ControlsSection: FC<ControlsSectionProps> = ({
             Manage this campaign
           </p>
           <div className="flex flex-col space-y-4">
-            <Button
-              className="flex items-center space-x-2"
-              variant="outline"
-              onClick={() => {
-                if (activeCampaign) {
-                  setCurrentCampaignId(activeCampaign.id);
-                }
-                setShowUploadDialog(true);
-              }}
-            >
-              <FileUp className="h-4 w-4 mr-2" />
-              Add More Leads
-            </Button>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button
+                      className="flex items-center space-x-2 w-full"
+                      variant="outline"
+                      onClick={() => {
+                        if (activeCampaign) {
+                          setCurrentCampaignId(activeCampaign.id);
+                        }
+                        setShowUploadDialog(true);
+                      }}
+                      disabled={!!(activeCampaign?.cadence_template?.id && 
+                                activeCampaign?.cadence_start_date && 
+                                new Date(activeCampaign.cadence_start_date).setHours(0, 0, 0, 0) <= new Date().setHours(0, 0, 0, 0))}
+                    >
+                      <FileUp className="h-4 w-4 mr-2" />
+                      Add More Leads
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                {!!(activeCampaign?.cadence_template?.id && 
+                     activeCampaign?.cadence_start_date && 
+                     new Date(activeCampaign.cadence_start_date).setHours(0, 0, 0, 0) <= new Date().setHours(0, 0, 0, 0)) && (
+                  <TooltipContent>
+                    <p>Cannot add leads after cadence has started</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
 
-            <Button
-              className={`${
-                isExecuting
-                  ? "bg-red-500 hover:bg-red-600"
-                  : "bg-green-500 hover:bg-green-600"
-              } w-full`}
-              onClick={toggleExecution}
-              disabled={isCallInProgress}
-            >
-              {isExecuting ? (
-                <>
-                  <Pause className="h-4 w-4 mr-2" />
-                  Stop Campaign
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Campaign
-                </>
-              )}
-            </Button>
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button
+                      className={`${
+                        isExecuting
+                          ? "bg-red-500 hover:bg-red-600"
+                          : "bg-green-500 hover:bg-green-600"
+                      } w-full`}
+                      onClick={toggleExecution}
+                      disabled={isCallInProgress || !!activeCampaign?.cadence_template?.id}
+                    >
+                      {isExecuting ? (
+                        <>
+                          <Pause className="h-4 w-4 mr-2" />
+                          Stop Campaign
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-4 w-4 mr-2" />
+                          Start Campaign
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                {activeCampaign?.cadence_template?.id && (
+                  <TooltipContent>
+                    <p>Cadence will automatically execute the campaign</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
