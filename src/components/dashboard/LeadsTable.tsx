@@ -55,6 +55,7 @@ interface LeadsTableProps {
   startIndex?: number;
   endIndex?: number;
   ITEMS_PER_PAGE?: number;
+  cadenceAttached: boolean
 }
 interface CallAttempt {
   id: string;
@@ -81,6 +82,7 @@ const LeadsTable: FC<LeadsTableProps> = ({
   totalLeads,
   startIndex,
   endIndex,
+  cadenceAttached
 }) => {
   const [playingLeadId, setPlayingLeadId] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -280,7 +282,8 @@ const LeadsTable: FC<LeadsTableProps> = ({
                 <TableHead>Cost</TableHead>
                 <TableHead>Recording</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Info</TableHead>
+                {cadenceAttached ? <TableHead>Info</TableHead> : ""}
+
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -293,8 +296,6 @@ const LeadsTable: FC<LeadsTableProps> = ({
                       <TableCell>
                         {(currentPage - 1) * 50 + index + 1}
                       </TableCell>
-
-                      <TableCell>{lead.name}</TableCell>
                       <TableCell>{lead.name}</TableCell>
                       <TableCell>{lead.phone_number}</TableCell>
                       <TableCell>{lead.status}</TableCell>
@@ -340,7 +341,7 @@ const LeadsTable: FC<LeadsTableProps> = ({
                       <TableCell>
                         {formatDateTime(lead?.initiated_at)}
                       </TableCell>
-                      <TableCell>
+                      {cadenceAttached ? <TableCell>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -349,7 +350,8 @@ const LeadsTable: FC<LeadsTableProps> = ({
                         >
                           <Info className="h-4 w-4" />
                         </Button>
-                      </TableCell>
+                      </TableCell> : ""}
+
                     </TableRow>
                   );
                 })
