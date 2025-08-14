@@ -87,7 +87,7 @@ const Billing: FC = () => {
 
   // Initial fetch on component mount
   useEffect(() => {
-    console.log("Fetching initial billing data...", startDate, endDate);
+
     fetchBillingData();
   }, [startDate, endDate]);
 

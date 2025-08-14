@@ -32,6 +32,8 @@ export const useCampaignExecution = (campaignId: string | null) => {
 
   const startExecution = async () => {
     try {
+      toast.success("Campaign execution started");
+      dispatch(markExecutionStarted(campaignId));
       const { data } = await enqueueCampaignJob({
         variables: {
           campaignId,
@@ -40,8 +42,8 @@ export const useCampaignExecution = (campaignId: string | null) => {
       });
 
       if (data?.enqueueCampaignJob.success) {
-        toast.success("Campaign execution started");
-        dispatch(markExecutionStarted(campaignId));
+        toast.success("Campaign execution complted");
+        dispatch(markExecutionStopped(campaignId));
       } else {
         toast.error(
           data?.enqueueCampaignJob.userError?.message ||

@@ -251,14 +251,14 @@ const LeadsTable: FC<LeadsTableProps> = ({
       hour12: true,
     });
   };
-
   return (
     <div className="bg-white shadow-sm rounded-lg border overflow-hidden">
       <div className="p-4">
         {/* Table Header with Pagination Info */}
         <div className="flex justify-between items-center mb-4">
           <div className="text-sm text-muted-foreground">
-            Showing {startIndex ? startIndex + 1 : 0} to{" "}
+
+            Showing {leads.length > 0 ? (startIndex ?? 0) + 1 : 0} to{" "}
             {Math.min(endIndex ? endIndex : 0, leads.length)} of {totalLeads}{" "}
             leads
           </div>
@@ -271,6 +271,7 @@ const LeadsTable: FC<LeadsTableProps> = ({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Sr No</TableHead>
                 <TableHead>Lead Name</TableHead>
                 <TableHead>Phone Number</TableHead>
                 <TableHead>Status</TableHead>
@@ -284,13 +285,16 @@ const LeadsTable: FC<LeadsTableProps> = ({
             </TableHeader>
             <TableBody>
               {isDashboardInitialized && paginatedLeads.length > 0 ? (
-                paginatedLeads.map((lead) => {
-                  {
-                    console.log("lead initiated_at", lead.initiated_at);
-                  }
+                paginatedLeads.map((lead, index) => {
+
 
                   return (
                     <TableRow key={lead.id}>
+                      <TableCell>
+                        {(currentPage - 1) * 50 + index + 1}
+                      </TableCell>
+
+                      <TableCell>{lead.name}</TableCell>
                       <TableCell>{lead.name}</TableCell>
                       <TableCell>{lead.phone_number}</TableCell>
                       <TableCell>{lead.status}</TableCell>
