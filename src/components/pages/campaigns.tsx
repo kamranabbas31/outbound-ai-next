@@ -54,7 +54,7 @@ const Campaigns: FC = () => {
         return;
       }
 
-      const result = await fetchCampaigns({ variables: { userId } });
+      const result = await fetchCampaigns({ variables: { userId }, fetchPolicy: "network-only" });
 
       const campaigns =
         (result?.data?.fetchCampaigns?.data as Campaign[]) ?? [];
