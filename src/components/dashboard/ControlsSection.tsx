@@ -64,19 +64,22 @@ const ControlsSection: FC<ControlsSectionProps> = ({
   };
 
   // Debug logging for date comparison
-  if (activeCampaign?.cadence_template?.id && activeCampaign?.cadence_start_date) {
+  if (
+    activeCampaign?.cadence_template?.id &&
+    activeCampaign?.cadence_start_date
+  ) {
     const startDate = new Date(activeCampaign.cadence_start_date);
     const currentDate = new Date();
     const startDateNoTime = startDate.setHours(0, 0, 0, 0);
     const currentDateNoTime = currentDate.setHours(0, 0, 0, 0);
-    
-    console.log('Debug Date Comparison:', {
+
+    console.log("Debug Date Comparison:", {
       originalStartDate: activeCampaign.cadence_start_date,
       parsedStartDate: startDate,
       startDateNoTime: startDateNoTime,
       currentDate: currentDate,
       currentDateNoTime: currentDateNoTime,
-      isDisabled: startDateNoTime <= currentDateNoTime
+      isDisabled: startDateNoTime <= currentDateNoTime,
     });
   }
   if (isViewingCampaign) {
@@ -101,18 +104,34 @@ const ControlsSection: FC<ControlsSectionProps> = ({
                         }
                         setShowUploadDialog(true);
                       }}
-                      disabled={!!(activeCampaign?.cadence_template?.id && 
-                                activeCampaign?.cadence_start_date && 
-                                new Date(activeCampaign.cadence_start_date).setHours(0, 0, 0, 0) <= new Date().setHours(0, 0, 0, 0))}
+                      disabled={
+                        !!(
+                          activeCampaign?.cadence_template?.id &&
+                          activeCampaign?.cadence_start_date &&
+                          new Date(activeCampaign.cadence_start_date).setHours(
+                            0,
+                            0,
+                            0,
+                            0
+                          ) <= new Date().setHours(0, 0, 0, 0)
+                        )
+                      }
                     >
                       <FileUp className="h-4 w-4 mr-2" />
                       Add More Leads
                     </Button>
                   </div>
                 </TooltipTrigger>
-                {!!(activeCampaign?.cadence_template?.id && 
-                     activeCampaign?.cadence_start_date && 
-                     new Date(activeCampaign.cadence_start_date).setHours(0, 0, 0, 0) <= new Date().setHours(0, 0, 0, 0)) && (
+                {!!(
+                  activeCampaign?.cadence_template?.id &&
+                  activeCampaign?.cadence_start_date &&
+                  new Date(activeCampaign.cadence_start_date).setHours(
+                    0,
+                    0,
+                    0,
+                    0
+                  ) <= new Date().setHours(0, 0, 0, 0)
+                ) && (
                   <TooltipContent>
                     <p>Cannot add leads after cadence has started</p>
                   </TooltipContent>
@@ -131,7 +150,10 @@ const ControlsSection: FC<ControlsSectionProps> = ({
                           : "bg-green-500 hover:bg-green-600"
                       } w-full`}
                       onClick={toggleExecution}
-                      disabled={isCallInProgress || !!activeCampaign?.cadence_template?.id}
+                      disabled={
+                        isCallInProgress ||
+                        !!activeCampaign?.cadence_template?.id
+                      }
                     >
                       {isExecuting ? (
                         <>
@@ -227,102 +249,102 @@ const ControlsSection: FC<ControlsSectionProps> = ({
     );
   }
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <div className="p-6 bg-white shadow-sm rounded-lg border">
-        <h3 className="text-lg font-semibold mb-2">File Upload</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Create a campaign first to upload leads
-        </p>
-        <div className="flex flex-col space-y-4">
-          <div className="cursor-not-allowed">
-            <Button
-              className="flex items-center space-x-2 w-full pointer-events-none opacity-50"
-              variant="outline"
-              disabled={true}
-            >
-              <FileUp className="h-4 w-4" />
-              <span>Upload CSV</span>
-            </Button>
-          </div>
-          <input
-            id="file-upload"
-            type="file"
-            accept=".csv"
-            className="hidden"
-            onChange={handleFileUpload}
-            disabled={true}
-          />
-          <p className="text-xs text-muted-foreground">
-            Use &quot;+ New Campaign&quot; button above to create a campaign
-            first
-          </p>
-        </div>
-      </div>
+  // return (
+  //   <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+  //     <div className="p-6 bg-white shadow-sm rounded-lg border">
+  //       <h3 className="text-lg font-semibold mb-2">File Upload</h3>
+  //       <p className="text-sm text-muted-foreground mb-4">
+  //         Create a campaign first to upload leads
+  //       </p>
+  //       <div className="flex flex-col space-y-4">
+  //         <div className="cursor-not-allowed">
+  //           <Button
+  //             className="flex items-center space-x-2 w-full pointer-events-none opacity-50"
+  //             variant="outline"
+  //             disabled={true}
+  //           >
+  //             <FileUp className="h-4 w-4" />
+  //             <span>Upload CSV</span>
+  //           </Button>
+  //         </div>
+  //         <input
+  //           id="file-upload"
+  //           type="file"
+  //           accept=".csv"
+  //           className="hidden"
+  //           onChange={handleFileUpload}
+  //           disabled={true}
+  //         />
+  //         <p className="text-xs text-muted-foreground">
+  //           Use &quot;+ New Campaign&quot; button above to create a campaign
+  //           first
+  //         </p>
+  //       </div>
+  //     </div>
 
-      <div className="p-6 bg-white shadow-sm rounded-lg border">
-        <h3 className="text-lg font-semibold mb-2">Pacing Controls</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Set the rate of outbound calls
-        </p>
-        <div className="flex flex-col space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Call Pacing (calls/sec)
-            </label>
-            <Select
-              value={selectedPacing}
-              onValueChange={setSelectedPacing}
-              disabled={isExecuting}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select pacing" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 call/sec</SelectItem>
-                <SelectItem value="2">2 calls/sec</SelectItem>
-                <SelectItem value="3">3 calls/sec</SelectItem>
-                <SelectItem value="5">5 calls/sec</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
+  //     <div className="p-6 bg-white shadow-sm rounded-lg border">
+  //       <h3 className="text-lg font-semibold mb-2">Pacing Controls</h3>
+  //       <p className="text-sm text-muted-foreground mb-4">
+  //         Set the rate of outbound calls
+  //       </p>
+  //       <div className="flex flex-col space-y-4">
+  //         <div className="space-y-2">
+  //           <label className="text-sm font-medium">
+  //             Call Pacing (calls/sec)
+  //           </label>
+  //           <Select
+  //             value={selectedPacing}
+  //             onValueChange={setSelectedPacing}
+  //             disabled={isExecuting}
+  //           >
+  //             <SelectTrigger className="w-full">
+  //               <SelectValue placeholder="Select pacing" />
+  //             </SelectTrigger>
+  //             <SelectContent>
+  //               <SelectItem value="1">1 call/sec</SelectItem>
+  //               <SelectItem value="2">2 calls/sec</SelectItem>
+  //               <SelectItem value="3">3 calls/sec</SelectItem>
+  //               <SelectItem value="5">5 calls/sec</SelectItem>
+  //             </SelectContent>
+  //           </Select>
+  //         </div>
+  //       </div>
+  //     </div>
 
-      <div className="p-6 bg-white shadow-sm rounded-lg border">
-        <h3 className="text-lg font-semibold mb-2">Call Execution</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Control the calling queue
-        </p>
-        <div className="flex flex-col space-y-4">
-          <Button
-            className={`${
-              isExecuting
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-green-500 hover:bg-green-600"
-            } w-full`}
-            onClick={toggleExecution}
-            disabled={isCallInProgress || !isDashboardInitialized}
-          >
-            {isExecuting ? (
-              <>
-                <Pause className="h-4 w-4 mr-2" />
-                Stop Execution
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Start Execution
-              </>
-            )}
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Create a campaign and upload leads to begin calling
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  //     <div className="p-6 bg-white shadow-sm rounded-lg border">
+  //       <h3 className="text-lg font-semibold mb-2">Call Execution</h3>
+  //       <p className="text-sm text-muted-foreground mb-4">
+  //         Control the calling queue
+  //       </p>
+  //       <div className="flex flex-col space-y-4">
+  //         <Button
+  //           className={`${
+  //             isExecuting
+  //               ? "bg-red-500 hover:bg-red-600"
+  //               : "bg-green-500 hover:bg-green-600"
+  //           } w-full`}
+  //           onClick={toggleExecution}
+  //           disabled={isCallInProgress || !isDashboardInitialized}
+  //         >
+  //           {isExecuting ? (
+  //             <>
+  //               <Pause className="h-4 w-4 mr-2" />
+  //               Stop Execution
+  //             </>
+  //           ) : (
+  //             <>
+  //               <Play className="h-4 w-4 mr-2" />
+  //               Start Execution
+  //             </>
+  //           )}
+  //         </Button>
+  //         <p className="text-xs text-muted-foreground">
+  //           Create a campaign and upload leads to begin calling
+  //         </p>
+  //       </div>
+  //     </div>
+  //   </div>
+  // );
 };
 
 export default ControlsSection;

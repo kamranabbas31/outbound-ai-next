@@ -51,6 +51,14 @@ export const useLeads = (
       fetchCampaignStats();
     }
   }, [campaignId]);
+ 
+  // Fetch stats when date range changes
+  useEffect(() => {
+    if (startDate && endDate && !isViewingCampaign) {
+      console.log("Date range changed in useLeads, calling resetDashboardStats");
+      resetDashboardStats();
+    }
+  }, [startDate, endDate , isViewingCampaign]);
 
   const fetchCampaignStats = async () => {
     if (!campaignId) return;
@@ -101,7 +109,7 @@ export const useLeads = (
           userId: userId ?? "",
           startDate: startDate || undefined,
           endDate: endDate || undefined,
-        },
+        }, fetchPolicy: "network-only"
       });
 
       const userError = response.data?.fetchDashboardStats?.userError;
