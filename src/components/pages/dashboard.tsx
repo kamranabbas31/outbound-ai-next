@@ -1,5 +1,5 @@
 "use client";
-import { FC, useState, useEffect, useMemo } from "react";
+import { FC, useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   CalendarIcon,
@@ -154,6 +154,11 @@ export const Dashboard: FC = () => {
     campaignId: string;
     cadenceId: string;
   } | null>(null);
+  
+  // Calendar popover states
+  const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
+  const [isUploadDatePopoverOpen, setIsUploadDatePopoverOpen] = useState(false);
+  const [isManageDatePopoverOpen, setIsManageDatePopoverOpen] = useState(false);
 
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
@@ -238,13 +243,8 @@ export const Dashboard: FC = () => {
   useEffect(() => {
     fetchTotalPages(); // only once now
   }, [campaignId, currentCampaignId]);
-  useEffect(() => {
-    if (showUploadDialog) {
-      fetchCadences();
-    }
-  }, [showUploadDialog]);
-
-  const fetchCadences = async () => {
+  
+  const fetchCadences = useCallback(async () => {
     try {
       const { data, error } = await fetchCadenceTemplatesQuery({
         fetchPolicy: "network-only",
@@ -265,7 +265,25 @@ export const Dashboard: FC = () => {
       toast.error("Failed to load cadences");
     } finally {
     }
-  };
+  }, [fetchCadenceTemplatesQuery]);
+
+  useEffect(() => {
+    if (showUploadDialog) {
+      fetchCadences();
+      
+      // If campaign already has a cadence, set it as selected
+      if (activeCampaign?.cadence_template?.id) {
+        setSelectedCadence(activeCampaign.cadence_template.id);
+        if (activeCampaign.cadence_start_date) {
+          setCadenceStartDate(new Date(activeCampaign.cadence_start_date));
+        }
+      } else {
+        // Reset cadence selection if no cadence is attached
+        setSelectedCadence("");
+        setCadenceStartDate(undefined);
+      }
+    }
+  }, [showUploadDialog, fetchCadences, activeCampaign]);
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
@@ -296,6 +314,23 @@ export const Dashboard: FC = () => {
     if (campaignId) {
       loadCampaignData(campaignId);
       setIsDashboardInitialized(true);
+      
+      // Check if we should show upload dialog for newly created campaign
+      const shouldShowUpload = sessionStorage.getItem('showUploadDialog');
+      const newCampaignId = sessionStorage.getItem('newCampaignId');
+      
+      if (shouldShowUpload === 'true' && newCampaignId === campaignId) {
+        // Clear the session storage flags
+        sessionStorage.removeItem('showUploadDialog');
+        sessionStorage.removeItem('newCampaignId');
+        
+        // Set the current campaign ID and show upload dialog
+        setCurrentCampaignId(campaignId);
+        setShowUploadDialog(true);
+        
+        // Fetch cadences for the upload dialog
+        fetchCadences();
+      }
     } else {
       setIsViewingCampaign(false);
       setIsDashboardInitialized(false);
@@ -406,21 +441,19 @@ export const Dashboard: FC = () => {
               disposition: phoneId ? null : "No available phone ID",
             };
           });
-          if (currentCampaignId) {
-            const { data, errors } = await addLeadsToCampaignMutation({
-              variables: {
-                campaignId: currentCampaignId,
-                leads: formattedLeads,
-                cadenceId:
-                  selectedCadence && selectedCadence !== "none"
-                    ? selectedCadence
-                    : undefined,
-                cadenceStartDate:
-                  selectedCadence && selectedCadence !== "none"
-                    ? new Date().toISOString()
-                    : undefined,
-              },
-            });
+                     if (currentCampaignId) {
+             const { data, errors } = await addLeadsToCampaignMutation({
+               variables: {
+                 campaignId: currentCampaignId,
+                 leads: formattedLeads,
+                 cadenceId:
+                   activeCampaign?.cadence_template?.id || 
+                   (selectedCadence && selectedCadence !== "none" ? selectedCadence : undefined),
+                 cadenceStartDate:
+                   activeCampaign?.cadence_start_date || 
+                   (selectedCadence && selectedCadence !== "none" ? new Date().toISOString() : undefined),
+               },
+             });
 
             if (errors) {
               toast.error("Failed to add leads to campaign");
@@ -486,13 +519,18 @@ export const Dashboard: FC = () => {
       });
       if (result?.data?.createCampaign?.userError === null) {
         toast.success(`Campaign "${campaignName}" created successfully`);
-        // setShowNewCampaignDialog(false);
+        setShowNewCampaignDialog(false);
 
-        setCurrentCampaignId(result?.data?.createCampaign?.data?.id ?? "");
-        // setShowUploadDialog(true);
-        // setIsDashboardInitialized(true);
-
-        router.push(`/campaigns/${result?.data?.createCampaign?.data?.id}`);
+        const newCampaignId = result?.data?.createCampaign?.data?.id ?? "";
+        setCurrentCampaignId(newCampaignId);
+        
+        // Redirect to the new campaign page
+        router.push(`/campaigns/${newCampaignId}`);
+        
+        // Set a flag to show upload dialog after navigation
+        // We'll use sessionStorage to persist this across navigation
+        sessionStorage.setItem('showUploadDialog', 'true');
+        sessionStorage.setItem('newCampaignId', newCampaignId);
       } else {
         toast.error("Failed to create campaign");
       }
@@ -883,20 +921,29 @@ export const Dashboard: FC = () => {
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-lg font-semibold">Cadence Configuration</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {activeCampaign.cadence_template?.id
-                  ? `This campaign is using the "${activeCampaign.cadence_template?.name || "Unknown"
-                  }" cadence template.`
-                  : "No cadence template attached to this campaign."}
-                {activeCampaign.cadence_start_date && (
-                  <span className="block">
-                    Start date:{" "}
-                    {new Date(
-                      activeCampaign.cadence_start_date
-                    ).toLocaleDateString()}
-                  </span>
-                )}
-              </p>
+                             <p className="text-sm text-muted-foreground mt-1">
+                 {activeCampaign.cadence_template?.id
+                   ? (
+                     <>
+                       This campaign is using the{" "}
+                       <span className="font-bold text-gray-900">
+                         "{activeCampaign.cadence_template?.name || "Unknown"}"
+                       </span>{" "}
+                       cadence template.
+                     </>
+                   )
+                   : "No cadence template attached to this campaign."}
+                 {activeCampaign.cadence_start_date && (
+                   <span className="block">
+                     Start date:{" "}
+                     <span className="font-semibold">
+                       {new Date(
+                         activeCampaign.cadence_start_date
+                       ).toLocaleDateString()}
+                     </span>
+                   </span>
+                 )}
+               </p>
             </div>
             <div className="flex flex-col space-y-2">
               {activeCampaign?.cadence_template?.id ? (
@@ -910,7 +957,7 @@ export const Dashboard: FC = () => {
                     Delink Cadence
                   </Button>
 
-                  <Popover>
+                  <Popover open={isStartDatePopoverOpen} onOpenChange={setIsStartDatePopoverOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
@@ -935,7 +982,10 @@ export const Dashboard: FC = () => {
                             ? new Date(activeCampaign.cadence_start_date)
                             : undefined
                         }
-                        onSelect={handleUpdateStartDate}
+                        onSelect={(date) => {
+                          handleUpdateStartDate(date);
+                          setIsStartDatePopoverOpen(false);
+                        }}
                         initialFocus
                         className={cn("p-3 pointer-events-auto")}
                         disabled={(date: Date) =>
@@ -947,7 +997,10 @@ export const Dashboard: FC = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleUpdateStartDate(undefined)}
+                            onClick={() => {
+                              handleUpdateStartDate(undefined);
+                              setIsStartDatePopoverOpen(false);
+                            }}
                             className="w-full"
                           >
                             Remove Start Date
@@ -1068,78 +1121,92 @@ export const Dashboard: FC = () => {
           <DialogHeader>
             <DialogTitle>Upload Leads</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+                    <div className="space-y-4 py-4">
             <p>
               Upload a CSV file with leads for your{" "}
               {currentCampaignId ? "campaign" : "dashboard"}.
             </p>
 
-            {/* <div className="space-y-2">
-              <Label htmlFor="cadence-select">Select Cadence (Optional)</Label>
-              <Select
-                value={selectedCadence}
-                onValueChange={setSelectedCadence}
-              >
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Choose a cadence template" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border shadow-lg z-50">
-                  <SelectItem value="none">No Cadence</SelectItem>
-                  {cadences &&
-                    cadences.length > 0 &&
-                    cadences.map((cadence) => (
-                      <SelectItem key={cadence.id} value={cadence.id}>
-                        {cadence.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Select a cadence template to apply to this campaign
-              </p>
-            </div> */}
+                    <div className="space-y-2">
+                <Label htmlFor="cadence-select">
+                  {activeCampaign?.cadence_template?.id ? "Selected Cadence" : "Select Cadence (Optional)"}
+                </Label>
+                <Select
+                 value={selectedCadence}
+                 onValueChange={setSelectedCadence}
+                 disabled={activeCampaign?.cadence_template?.id ? true : false}
+               >
+                 <SelectTrigger className="bg-white">
+                   <SelectValue placeholder={
+                     activeCampaign?.cadence_template?.id 
+                       ? `${activeCampaign.cadence_template.name}`
+                       : "Choose a cadence template"
+                   } />
+                 </SelectTrigger>
+                 <SelectContent className="bg-white border shadow-lg z-50">
+                   <SelectItem value="none">No Cadence</SelectItem>
+                   {cadences &&
+                     cadences.length > 0 &&
+                     cadences.map((cadence) => (
+                       <SelectItem key={cadence.id} value={cadence.id}>
+                         {cadence.name}
+                       </SelectItem>
+                     ))}
+                 </SelectContent>
+               </Select>
+               <p className="text-xs text-muted-foreground">
+                 {activeCampaign?.cadence_template?.id 
+                   ? "This campaign already has a cadence attached. You cannot change it here."
+                   : "Select a cadence template to apply to this campaign"
+                 }
+               </p>
+             </div> 
 
-            {/* {selectedCadence && selectedCadence !== "none" && (
-              <div className="space-y-2">
-                <Label>Cadence Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal bg-white",
-                        !cadenceStartDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {cadenceStartDate ? (
-                        format(cadenceStartDate, "PPP")
-                      ) : (
-                        <span>Pick a start date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-auto p-0 bg-white border shadow-lg z-50"
-                    align="start"
-                  >
-                    <Calendar
-                      mode="single"
-                      selected={cadenceStartDate}
-                      onSelect={setCadenceStartDate}
-                      disabled={(date) =>
-                        date < new Date(new Date().setHours(0, 0, 0, 0))
-                      }
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-                <p className="text-xs text-muted-foreground">
-                  Select when the cadence should start executing
-                </p>
-              </div>
-            )} */}
+                 {(selectedCadence && selectedCadence !== "none" && !activeCampaign?.cadence_template?.id) && (
+                 <div className="space-y-2">
+                   <Label>Cadence Start Date</Label>
+                   <Popover open={isUploadDatePopoverOpen} onOpenChange={setIsUploadDatePopoverOpen}>
+                     <PopoverTrigger asChild>
+                       <Button
+                         variant="outline"
+                         className={cn(
+                           "w-full justify-start text-left font-normal bg-white",
+                           !cadenceStartDate && "text-muted-foreground"
+                         )}
+                       >
+                         <CalendarIcon className="mr-2 h-4 w-4" />
+                         {cadenceStartDate ? (
+                           format(cadenceStartDate, "PPP")
+                         ) : (
+                           <span>Pick a start date</span>
+                         )}
+                       </Button>
+                     </PopoverTrigger>
+                     <PopoverContent
+                       className="w-auto p-0 bg-white border shadow-lg z-50"
+                       align="start"
+                     >
+                       <Calendar
+                         mode="single"
+                         selected={cadenceStartDate}
+                         onSelect={(date) => {
+                           setCadenceStartDate(date);
+                           setIsUploadDatePopoverOpen(false);
+                         }}
+                         disabled={(date) =>
+                           date < new Date(new Date().setHours(0, 0, 0, 0))
+                         }
+                         initialFocus
+                         className={cn("p-3 pointer-events-auto")}
+                       />
+                     </PopoverContent>
+                   </Popover>
+                   <p className="text-xs text-muted-foreground">
+                     Select when the cadence should start executing
+                   </p>
+                 </div>
+               )} 
+            
 
             <Button
               className="flex items-center space-x-2 w-full"

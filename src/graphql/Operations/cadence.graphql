@@ -38,6 +38,25 @@ mutation CreateCadenceTemplate($input: CreateCadenceTemplateInput!) {
   }
 }
 
+mutation UpdateCadenceTemplate($input: UpdateCadenceTemplateInput!) {
+  updateCadenceTemplate(input: $input) {
+    userError {
+      message
+    }
+    template {
+      id
+      name
+      retry_dispositions
+      cadence_days
+      created_at
+      campaigns {
+        id
+        name
+      }
+    }
+  }
+}
+
 mutation DeleteCadenceTemplate($id: String!) {
   deleteCadenceTemplate(id: $id) {
     userError {

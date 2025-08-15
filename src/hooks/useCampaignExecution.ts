@@ -42,15 +42,17 @@ export const useCampaignExecution = (campaignId: string | null) => {
       });
 
       if (data?.enqueueCampaignJob.success) {
-        toast.success("Campaign execution complted");
+        toast.success("Campaign execution completed");
         dispatch(markExecutionStopped(campaignId));
       } else {
+        dispatch(markExecutionStopped(campaignId));
         toast.error(
           data?.enqueueCampaignJob.userError?.message ||
           "Failed to start execution"
         );
       }
     } catch (err) {
+      dispatch(markExecutionStopped(campaignId));
       console.error("Error starting execution:", err);
       toast.error("Failed to start execution");
     }

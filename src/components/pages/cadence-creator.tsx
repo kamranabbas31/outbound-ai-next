@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,13 +7,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { useCreateCadenceTemplateMutation } from "@/generated/graphql";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCreateCadenceTemplateMutation, useUpdateCadenceTemplateMutation, useCadenceTemplatesLazyQuery } from "@/generated/graphql";
 
 interface CadenceDay {
   day: number;
   attempts: number;
   timeWindows: string;
+}
+
+interface CadenceTemplate {
+  id: string;
+  name: string;
+  retry_dispositions: string[];
+  cadence_days: any[];
 }
 
 // Smart Time Window Input Component
@@ -175,6 +182,8 @@ const RETRY_DISPOSITION_OPTIONS = [
 export default function CadenceCreator() {
   // GraphQL mutation hook
   const [createCadenceTemplate] = useCreateCadenceTemplateMutation();
+  const [updateCadenceTemplate] = useUpdateCadenceTemplateMutation();
+  const [fetchCadenceTemplate] = useCadenceTemplatesLazyQuery();
 
   // State variables
   const [cadenceName, setCadenceName] = useState("");
@@ -183,8 +192,62 @@ export default function CadenceCreator() {
     { day: 1, attempts: 1, timeWindows: "" },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id) {
+      setIsEditing(true);
+      setTemplateId(id);
+      loadCadenceTemplate(id);
+    }
+  }, [searchParams]);
+
+  const loadCadenceTemplate = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const { data } = await fetchCadenceTemplate({
+        variables: {},
+        fetchPolicy: "network-only",
+      });
+
+      if (data?.cadenceTemplates?.templates) {
+        const template = data.cadenceTemplates.templates.find(t => t.id === id);
+        if (template) {
+          setCadenceName(template.name);
+          setRetryDispositions(template.retry_dispositions || []);
+          
+                     // Convert cadence_days from backend format to frontend format
+           if (template.cadence_days && typeof template.cadence_days === 'object') {
+             // Handle the Record<string, { attempts: number; time_windows: string[] }> format
+             const convertedDays = Object.entries(template.cadence_days)
+               .sort(([a], [b]) => parseInt(a) - parseInt(b))
+               .map(([day, data]) => {
+                 const dayData = data as { attempts: number; time_windows: string[] };
+                 return {
+                   day: parseInt(day) || 1,
+                   attempts: dayData.attempts || 1,
+                   timeWindows: Array.isArray(dayData.time_windows) 
+                     ? dayData.time_windows.join(", ") 
+                     : "",
+                 };
+               });
+             setCadenceDays(convertedDays);
+           }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cadence template:", error);
+      toast.error("Failed to load cadence template");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleDispositionChange = (disposition: string, checked: boolean) => {
     if (checked) {
@@ -286,24 +349,47 @@ export default function CadenceCreator() {
         },
       }));
 
-      const { data } = await createCadenceTemplate({
-        variables: {
-          input: {
-            name: cadenceName,
-            retry_dispositions: retryDispositions,
-            cadence_days,
-          },
-        },
-      });
+             if (isEditing) {
+         const { data } = await updateCadenceTemplate({
+           variables: {
+             input: {
+               id: templateId!,
+               name: cadenceName,
+               retry_dispositions: retryDispositions,
+               cadence_days,
+             },
+           },
+         });
 
-      if (!data?.createCadenceTemplate?.userError?.message) {
-        toast.success("Cadence created successfully!");
-        router.push("/cadences");
+        if (!data?.updateCadenceTemplate?.userError?.message) {
+          toast.success("Cadence updated successfully!");
+          router.push("/cadences");
+        } else {
+          toast.error(
+            data?.updateCadenceTemplate?.userError?.message ||
+              "Something went wrong"
+          );
+        }
       } else {
-        toast.error(
-          data?.createCadenceTemplate?.userError?.message ||
-            "Something went wrong"
-        );
+        const { data } = await createCadenceTemplate({
+          variables: {
+            input: {
+              name: cadenceName,
+              retry_dispositions: retryDispositions,
+              cadence_days,
+            },
+          },
+        });
+
+        if (!data?.createCadenceTemplate?.userError?.message) {
+          toast.success("Cadence created successfully!");
+          router.push("/cadences");
+        } else {
+          toast.error(
+            data?.createCadenceTemplate?.userError?.message ||
+              "Something went wrong"
+          );
+        }
       }
     } catch (error: any) {
       console.error("Error creating cadence:", error);
@@ -316,13 +402,21 @@ export default function CadenceCreator() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Create Dialing Cadence</h1>
+        <h1 className="text-3xl font-bold mb-2">
+          {isEditing ? "Edit Dialing Cadence" : "Create Dialing Cadence"}
+        </h1>
         <p className="text-muted-foreground">
           Design a custom cadence template for your campaigns
         </p>
       </div>
 
       <form onSubmit={handleSubmit}>
+        {isLoading && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-800">Loading cadence template...</p>
+          </div>
+        )}
+        
         <div className="space-y-6">
           {/* Cadence Name */}
           <Card>
@@ -331,13 +425,14 @@ export default function CadenceCreator() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Label htmlFor="cadence-name">Cadence Name</Label>
+                <Label htmlFor="cadence-name">Cadence Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="cadence-name"
                   value={cadenceName}
                   onChange={(e) => setCadenceName(e.target.value)}
                   placeholder="Enter cadence name"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </CardContent>
@@ -364,6 +459,7 @@ export default function CadenceCreator() {
                       onCheckedChange={(checked) =>
                         handleDispositionChange(disposition, checked as boolean)
                       }
+                      disabled={isLoading}
                     />
                     <Label
                       htmlFor={disposition}
@@ -410,6 +506,7 @@ export default function CadenceCreator() {
                         }
                         className="mt-1"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="flex-1">
@@ -429,6 +526,7 @@ export default function CadenceCreator() {
                         }
                         className="mt-1"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="flex-2">
@@ -478,12 +576,12 @@ export default function CadenceCreator() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push("/campaigns")}
+              onClick={() => router.push("/cadences")}
             >
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Cadence"}
+              {isSubmitting ? "Saving..." : "Save Cadence"}
             </Button>
           </div>
         </div>

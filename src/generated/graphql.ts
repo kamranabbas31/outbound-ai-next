@@ -269,6 +269,7 @@ export type Mutation = {
   register: RegisterResponse;
   stopCadence: CadenceAttachResponse;
   stopCampaignJob: QueueResponse;
+  updateCadenceTemplate: UpdateCadenceTemplateResponse;
   updateCampaign: UpdateCampaignResponse;
 };
 
@@ -330,6 +331,11 @@ export type MutationStopCadenceArgs = {
 
 export type MutationStopCampaignJobArgs = {
   campaignId: Scalars['String']['input'];
+};
+
+
+export type MutationUpdateCadenceTemplateArgs = {
+  input: UpdateCadenceTemplateInput;
 };
 
 
@@ -423,6 +429,19 @@ export type RegisterResponse = {
   user: User;
 };
 
+export type UpdateCadenceTemplateInput = {
+  cadence_days?: InputMaybe<Array<CadenceDaysInput>>;
+  id: Scalars['String']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
+  retry_dispositions?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type UpdateCadenceTemplateResponse = {
+  __typename?: 'UpdateCadenceTemplateResponse';
+  template?: Maybe<CadenceTemplate>;
+  userError?: Maybe<UserError>;
+};
+
 export type UpdateCampaignInput = {
   cadence_completed?: InputMaybe<Scalars['Boolean']['input']>;
   cadence_start_date?: InputMaybe<Scalars['DateTime']['input']>;
@@ -507,6 +526,13 @@ export type CreateCadenceTemplateMutationVariables = Exact<{
 
 
 export type CreateCadenceTemplateMutation = { __typename?: 'Mutation', createCadenceTemplate: { __typename?: 'CreateCadenceTemplateResponse', userError?: { __typename?: 'UserError', message: string } | null, template?: { __typename?: 'CadenceTemplate', id: string, name: string, retry_dispositions: Array<string>, cadence_days: any, created_at: any, campaigns: Array<{ __typename?: 'Campaign', id: string, name: string }> } | null } };
+
+export type UpdateCadenceTemplateMutationVariables = Exact<{
+  input: UpdateCadenceTemplateInput;
+}>;
+
+
+export type UpdateCadenceTemplateMutation = { __typename?: 'Mutation', updateCadenceTemplate: { __typename?: 'UpdateCadenceTemplateResponse', userError?: { __typename?: 'UserError', message: string } | null, template?: { __typename?: 'CadenceTemplate', id: string, name: string, retry_dispositions: Array<string>, cadence_days: any, created_at: any, campaigns: Array<{ __typename?: 'Campaign', id: string, name: string }> } | null } };
 
 export type DeleteCadenceTemplateMutationVariables = Exact<{
   id: Scalars['String']['input'];
@@ -940,6 +966,52 @@ export function useCreateCadenceTemplateMutation(baseOptions?: Apollo.MutationHo
 export type CreateCadenceTemplateMutationHookResult = ReturnType<typeof useCreateCadenceTemplateMutation>;
 export type CreateCadenceTemplateMutationResult = Apollo.MutationResult<CreateCadenceTemplateMutation>;
 export type CreateCadenceTemplateMutationOptions = Apollo.BaseMutationOptions<CreateCadenceTemplateMutation, CreateCadenceTemplateMutationVariables>;
+export const UpdateCadenceTemplateDocument = gql`
+    mutation UpdateCadenceTemplate($input: UpdateCadenceTemplateInput!) {
+  updateCadenceTemplate(input: $input) {
+    userError {
+      message
+    }
+    template {
+      id
+      name
+      retry_dispositions
+      cadence_days
+      created_at
+      campaigns {
+        id
+        name
+      }
+    }
+  }
+}
+    `;
+export type UpdateCadenceTemplateMutationFn = Apollo.MutationFunction<UpdateCadenceTemplateMutation, UpdateCadenceTemplateMutationVariables>;
+
+/**
+ * __useUpdateCadenceTemplateMutation__
+ *
+ * To run a mutation, you first call `useUpdateCadenceTemplateMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateCadenceTemplateMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateCadenceTemplateMutation, { data, loading, error }] = useUpdateCadenceTemplateMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateCadenceTemplateMutation(baseOptions?: Apollo.MutationHookOptions<UpdateCadenceTemplateMutation, UpdateCadenceTemplateMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateCadenceTemplateMutation, UpdateCadenceTemplateMutationVariables>(UpdateCadenceTemplateDocument, options);
+      }
+export type UpdateCadenceTemplateMutationHookResult = ReturnType<typeof useUpdateCadenceTemplateMutation>;
+export type UpdateCadenceTemplateMutationResult = Apollo.MutationResult<UpdateCadenceTemplateMutation>;
+export type UpdateCadenceTemplateMutationOptions = Apollo.BaseMutationOptions<UpdateCadenceTemplateMutation, UpdateCadenceTemplateMutationVariables>;
 export const DeleteCadenceTemplateDocument = gql`
     mutation DeleteCadenceTemplate($id: String!) {
   deleteCadenceTemplate(id: $id) {

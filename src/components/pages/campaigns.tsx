@@ -76,8 +76,10 @@ const Campaigns: FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    const lowerStatus = status.toLowerCase();
+    switch (lowerStatus) {
       case "in-progress":
+      case "inprogress":
         return (
           <Badge className="bg-blue-500 hover:bg-blue-600">In Progress</Badge>
         );
@@ -109,6 +111,10 @@ const Campaigns: FC = () => {
       case "partial":
         return (
           <Badge className="bg-amber-500 hover:bg-amber-600">Partial</Badge>
+        );
+      case "failed":
+        return (
+          <Badge className="bg-red-500 hover:bg-red-600">Failed</Badge>
         );
       default:
         return <Badge variant="outline">{status}</Badge>;

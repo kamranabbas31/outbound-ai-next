@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,11 +19,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit, Copy } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCadenceTemplatesLazyQuery,
   useDeleteCadenceTemplateMutation,
+  useCreateCadenceTemplateMutation,
 } from "@/generated/graphql";
 
 // Replace with your actual type based on your NestJS response
@@ -44,9 +46,12 @@ interface CadenceTemplate {
 }
 
 const Cadences = () => {
+  const router = useRouter();
+  
   // queries and mutations
   const [fetchCadenceTemplatesQuery] = useCadenceTemplatesLazyQuery();
   const [deleteCadenceTemplateMutation] = useDeleteCadenceTemplateMutation();
+  const [createCadenceTemplateMutation] = useCreateCadenceTemplateMutation();
 
   // State management for cadences and dialog
   const [cadences, setCadences] = useState<CadenceTemplate[]>([]);
@@ -55,6 +60,7 @@ const Cadences = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
 
   useEffect(() => {
     fetchCadences();
@@ -138,6 +144,56 @@ const Cadences = () => {
     await deleteCadence(selectedCadence.id);
   };
 
+  const handleCloneCadence = async (cadence: CadenceTemplate) => {
+    setIsCloning(true);
+    try {
+      // Convert cadence_days from backend format to frontend format
+      const cadence_days = Object.entries(cadence.cadence_days)
+        .sort(([a], [b]) => parseInt(a) - parseInt(b))
+        .map(([day, data]) => {
+          const dayData = data as { attempts: number; time_windows: string[] };
+          return {
+            day: day,
+            config: {
+              attempts: dayData.attempts,
+              time_windows: dayData.time_windows,
+            },
+          };
+        });
+
+      const { data } = await createCadenceTemplateMutation({
+        variables: {
+          input: {
+            name: `${cadence.name}-Copy`,
+            retry_dispositions: cadence.retry_dispositions,
+            cadence_days,
+          },
+        },
+      });
+
+             if (!data?.createCadenceTemplate?.userError?.message) {
+         toast.success("Cadence cloned successfully!");
+         // Refresh the cadences list
+         fetchCadences();
+         // Close the dialog if it's open
+         if (isDialogOpen) {
+           setIsDialogOpen(false);
+           setSelectedCadence(null);
+         }
+       } else {
+        toast.error(
+          data?.createCadenceTemplate?.userError?.message ||
+            "Failed to clone cadence"
+        );
+      }
+    } catch (error) {
+      console.error("Error cloning cadence:", error);
+      toast.error("Failed to clone cadence. Please try again.");
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -181,7 +237,7 @@ const Cadences = () => {
                 <TableHead>Retry Dispositions</TableHead>
                 <TableHead>Total Days Defined</TableHead>
                 <TableHead>Campaigns Used In</TableHead>
-                <TableHead>Actions</TableHead>
+                                 <TableHead className="w-56">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -220,13 +276,35 @@ const Cadences = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewDetails(cadence)}
-                    >
-                      View Details
-                    </Button>
+                                         <div className="flex gap-2">
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => handleViewDetails(cadence)}
+                         className="text-xs"
+                       >
+                         View Details
+                       </Button>
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => router.push(`/cadence-creator?id=${cadence.id}`)}
+                         className="text-xs"
+                       >
+                         <Edit className="h-4 w-4 mr-1" />
+                         Edit
+                       </Button>
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => handleCloneCadence(cadence)}
+                         disabled={isCloning}
+                         className="text-xs"
+                       >
+                         <Copy className="h-4 w-4 mr-1" />
+                         {isCloning ? "Cloning..." : "Clone"}
+                       </Button>
+                     </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -289,16 +367,40 @@ const Cadences = () => {
                 )}
               </div>
 
-              <div className="flex justify-end pt-4 border-t">
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteCadence}
-                  disabled={isDeleting}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {isDeleting ? "Deleting..." : "Delete Cadence"}
-                </Button>
-              </div>
+                             <div className="flex justify-end gap-2 pt-4 border-t">
+                 <Button
+                   variant="outline"
+                   onClick={() => {
+                     if (selectedCadence) {
+                       setIsDialogOpen(false);
+                       router.push(`/cadence-creator?id=${selectedCadence.id}`);
+                     }
+                   }}
+                 >
+                   <Edit className="h-4 w-4 mr-2" />
+                   Edit
+                 </Button>
+                 <Button
+                   variant="outline"
+                   onClick={() => {
+                     if (selectedCadence) {
+                       handleCloneCadence(selectedCadence);
+                     }
+                   }}
+                   disabled={isCloning}
+                 >
+                   <Copy className="h-4 w-4 mr-2" />
+                   {isCloning ? "Cloning..." : "Clone"}
+                 </Button>
+                 <Button
+                   variant="destructive"
+                   onClick={handleDeleteCadence}
+                   disabled={isDeleting}
+                 >
+                   <Trash2 className="h-4 w-4 mr-2" />
+                   {isDeleting ? "Deleting..." : "Delete Cadence"}
+                 </Button>
+               </div>
             </div>
           )}
         </DialogContent>
