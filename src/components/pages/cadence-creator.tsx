@@ -8,7 +8,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCreateCadenceTemplateMutation, useUpdateCadenceTemplateMutation, useCadenceTemplatesLazyQuery } from "@/generated/graphql";
+import {
+  useCreateCadenceTemplateMutation,
+  useUpdateCadenceTemplateMutation,
+  useCadenceTemplatesLazyQuery,
+} from "@/generated/graphql";
 
 interface CadenceDay {
   day: number;
@@ -31,22 +35,27 @@ interface TimeWindowInputProps {
   className?: string;
 }
 
-const TimeWindowInput = ({ value, onChange, placeholder, className }: TimeWindowInputProps) => {
+const TimeWindowInput = ({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: TimeWindowInputProps) => {
   const [inputValue, setInputValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
 
   const formatTimeWindows = (digits: string): string => {
-    if (digits.length === 0) return '';
-    
-    let result = '';
+    if (digits.length === 0) return "";
+
+    let result = "";
     let position = 0;
-    
+
     while (position < digits.length) {
       // Start new time window
-      if (result && !result.endsWith(', ')) {
-        result += ', ';
+      if (result && !result.endsWith(", ")) {
+        result += ", ";
       }
-      
+
       // First hour (HH)
       if (position < digits.length) {
         let hour = parseInt(digits[position]);
@@ -54,20 +63,22 @@ const TimeWindowInput = ({ value, onChange, placeholder, className }: TimeWindow
         result += hour.toString();
         position++;
       }
-      
+
       // Second digit of hour
       if (position < digits.length) {
         let hour = parseInt(digits.substring(position - 1, position + 1));
         if (hour > 23) hour = 0;
-        result = result.substring(0, result.length - 1) + hour.toString().padStart(2, '0');
+        result =
+          result.substring(0, result.length - 1) +
+          hour.toString().padStart(2, "0");
         position++;
       }
-      
+
       // Add colon after hours
       if (position < digits.length) {
-        result += ':';
+        result += ":";
       }
-      
+
       // First digit of minutes
       if (position < digits.length) {
         let minute = parseInt(digits[position]);
@@ -75,20 +86,22 @@ const TimeWindowInput = ({ value, onChange, placeholder, className }: TimeWindow
         result += minute.toString();
         position++;
       }
-      
+
       // Second digit of minutes
       if (position < digits.length) {
         let minute = parseInt(digits.substring(position - 1, position + 1));
         if (minute > 59) minute = 0;
-        result = result.substring(0, result.length - 1) + minute.toString().padStart(2, '0');
+        result =
+          result.substring(0, result.length - 1) +
+          minute.toString().padStart(2, "0");
         position++;
       }
-      
+
       // Add dash for time range
       if (position < digits.length) {
-        result += '-';
+        result += "-";
       }
-      
+
       // Second hour (HH)
       if (position < digits.length) {
         let hour = parseInt(digits[position]);
@@ -96,20 +109,22 @@ const TimeWindowInput = ({ value, onChange, placeholder, className }: TimeWindow
         result += hour.toString();
         position++;
       }
-      
+
       // Second digit of second hour
       if (position < digits.length) {
         let hour = parseInt(digits.substring(position - 1, position + 1));
         if (hour > 23) hour = 0;
-        result = result.substring(0, result.length - 1) + hour.toString().padStart(2, '0');
+        result =
+          result.substring(0, result.length - 1) +
+          hour.toString().padStart(2, "0");
         position++;
       }
-      
+
       // Add colon after second hours
       if (position < digits.length) {
-        result += ':';
+        result += ":";
       }
-      
+
       // First digit of second minutes
       if (position < digits.length) {
         let minute = parseInt(digits[position]);
@@ -117,28 +132,30 @@ const TimeWindowInput = ({ value, onChange, placeholder, className }: TimeWindow
         result += minute.toString();
         position++;
       }
-      
+
       // Second digit of second minutes
       if (position < digits.length) {
         let minute = parseInt(digits.substring(position - 1, position + 1));
         if (minute > 59) minute = 0;
-        result = result.substring(0, result.length - 1) + minute.toString().padStart(2, '0');
+        result =
+          result.substring(0, result.length - 1) +
+          minute.toString().padStart(2, "0");
         position++;
       }
     }
-    
+
     return result;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    
+
     // Extract only digits
-    const digits = newValue.replace(/\D/g, '');
-    
+    const digits = newValue.replace(/\D/g, "");
+
     // Format into time windows
     const formatted = formatTimeWindows(digits);
-    
+
     setInputValue(formatted);
     onChange(formatted);
   };
@@ -161,7 +178,6 @@ const TimeWindowInput = ({ value, onChange, placeholder, className }: TimeWindow
         placeholder={placeholder}
         className={className}
       />
-    
     </div>
   );
 };
@@ -217,28 +233,36 @@ export default function CadenceCreator() {
       });
 
       if (data?.cadenceTemplates?.templates) {
-        const template = data.cadenceTemplates.templates.find(t => t.id === id);
+        const template = data.cadenceTemplates.templates.find(
+          (t) => t.id === id
+        );
         if (template) {
           setCadenceName(template.name);
           setRetryDispositions(template.retry_dispositions || []);
-          
-                     // Convert cadence_days from backend format to frontend format
-           if (template.cadence_days && typeof template.cadence_days === 'object') {
-             // Handle the Record<string, { attempts: number; time_windows: string[] }> format
-             const convertedDays = Object.entries(template.cadence_days)
-               .sort(([a], [b]) => parseInt(a) - parseInt(b))
-               .map(([day, data]) => {
-                 const dayData = data as { attempts: number; time_windows: string[] };
-                 return {
-                   day: parseInt(day) || 1,
-                   attempts: dayData.attempts || 1,
-                   timeWindows: Array.isArray(dayData.time_windows) 
-                     ? dayData.time_windows.join(", ") 
-                     : "",
-                 };
-               });
-             setCadenceDays(convertedDays);
-           }
+
+          // Convert cadence_days from backend format to frontend format
+          if (
+            template.cadence_days &&
+            typeof template.cadence_days === "object"
+          ) {
+            // Handle the Record<string, { attempts: number; time_windows: string[] }> format
+            const convertedDays = Object.entries(template.cadence_days)
+              .sort(([a], [b]) => parseInt(a) - parseInt(b))
+              .map(([day, data]) => {
+                const dayData = data as {
+                  attempts: number;
+                  time_windows: string[];
+                };
+                return {
+                  day: parseInt(day) || 1,
+                  attempts: dayData.attempts || 1,
+                  timeWindows: Array.isArray(dayData.time_windows)
+                    ? dayData.time_windows.join(", ")
+                    : "",
+                };
+              });
+            setCadenceDays(convertedDays);
+          }
         }
       }
     } catch (error) {
@@ -299,34 +323,64 @@ export default function CadenceCreator() {
     }
 
     // Check if any time windows are empty
-    const hasEmptyTimeWindows = cadenceDays.some(day => !day.timeWindows.trim());
+    const hasEmptyTimeWindows = cadenceDays.some(
+      (day) => !day.timeWindows.trim()
+    );
     if (hasEmptyTimeWindows) {
       toast.error("Please fill in time windows for all cadence days");
       hasError = true;
     }
 
     // Check if any day numbers or attempts are missing
-    const hasInvalidDays = cadenceDays.some(day => !day.day || !day.attempts);
+    const hasInvalidDays = cadenceDays.some((day) => !day.day || !day.attempts);
     if (hasInvalidDays) {
-      toast.error("Please fill in day number and attempts for all cadence days");
+      toast.error(
+        "Please fill in day number and attempts for all cadence days"
+      );
       hasError = true;
     }
 
     // Validate time window format for each day
-    const hasInvalidTimeWindows = cadenceDays.some(day => {
+    const hasInvalidTimeWindows = cadenceDays.some((day) => {
       if (!day.timeWindows.trim()) return false;
-      
-      const timeWindows = day.timeWindows.split(',').map(tw => tw.trim()).filter(tw => tw.length > 0);
-      
-      return timeWindows.some(timeWindow => {
+
+      const timeWindows = day.timeWindows
+        .split(",")
+        .map((tw) => tw.trim())
+        .filter((tw) => tw.length > 0);
+
+      return timeWindows.some((timeWindow) => {
         // Check if time window follows HH:MM-HH:MM format
         const timePattern = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
-        return !timePattern.test(timeWindow);
+        if (!timePattern.test(timeWindow)) return true;
+
+        // Check if time difference is at least 30 minutes
+        const [startTime, endTime] = timeWindow.split("-");
+        const startMinutes =
+          parseInt(startTime.split(":")[0]) * 60 +
+          parseInt(startTime.split(":")[1]);
+        const endMinutes =
+          parseInt(endTime.split(":")[0]) * 60 +
+          parseInt(endTime.split(":")[1]);
+
+        // Handle case where end time is on the next day
+        const timeDifference =
+          endMinutes >= startMinutes
+            ? endMinutes - startMinutes
+            : 24 * 60 - startMinutes + endMinutes;
+
+        if (timeDifference < 30) {
+          return true;
+        }
+
+        return false;
       });
     });
 
     if (hasInvalidTimeWindows) {
-      toast.error("Each time window must be in proper format (HH:MM-HH:MM). Complete all time windows before saving.");
+      toast.error(
+        "Each time window must be at least 30 minutes long and in proper format (HH:MM-HH:MM). Complete all time windows before saving."
+      );
       hasError = true;
     }
 
@@ -349,17 +403,17 @@ export default function CadenceCreator() {
         },
       }));
 
-             if (isEditing) {
-         const { data } = await updateCadenceTemplate({
-           variables: {
-             input: {
-               id: templateId!,
-               name: cadenceName,
-               retry_dispositions: retryDispositions,
-               cadence_days,
-             },
-           },
-         });
+      if (isEditing) {
+        const { data } = await updateCadenceTemplate({
+          variables: {
+            input: {
+              id: templateId!,
+              name: cadenceName,
+              retry_dispositions: retryDispositions,
+              cadence_days,
+            },
+          },
+        });
 
         if (!data?.updateCadenceTemplate?.userError?.message) {
           toast.success("Cadence updated successfully!");
@@ -416,7 +470,7 @@ export default function CadenceCreator() {
             <p className="text-blue-800">Loading cadence template...</p>
           </div>
         )}
-        
+
         <div className="space-y-6">
           {/* Cadence Name */}
           <Card>
@@ -425,7 +479,9 @@ export default function CadenceCreator() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Label htmlFor="cadence-name">Cadence Name <span className="text-red-500">*</span></Label>
+                <Label htmlFor="cadence-name">
+                  Cadence Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="cadence-name"
                   value={cadenceName}
@@ -441,7 +497,9 @@ export default function CadenceCreator() {
           {/* Retry Dispositions */}
           <Card>
             <CardHeader>
-              <CardTitle>Retry Dispositions <span className="text-red-500">*</span></CardTitle>
+              <CardTitle>
+                Retry Dispositions <span className="text-red-500">*</span>
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Only retry leads with these call outcomes
               </p>
@@ -535,7 +593,9 @@ export default function CadenceCreator() {
                       </Label>
                       <TimeWindowInput
                         value={day.timeWindows}
-                        onChange={(value) => updateCadenceDay(index, "timeWindows", value)}
+                        onChange={(value) =>
+                          updateCadenceDay(index, "timeWindows", value)
+                        }
                         placeholder="10:00–12:00, 14:00–16:00"
                         className="mt-1"
                       />
