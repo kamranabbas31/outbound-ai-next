@@ -13,6 +13,7 @@ import {
   useUpdateCadenceTemplateMutation,
   useCadenceTemplatesLazyQuery,
 } from "@/generated/graphql";
+import { cn } from "@/lib/utils";
 
 interface CadenceDay {
   day: number;
@@ -43,6 +44,7 @@ const TimeWindowInput = ({
 }: TimeWindowInputProps) => {
   const [inputValue, setInputValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
+  const [rawDigits, setRawDigits] = useState("");
 
   const formatTimeWindows = (digits: string): string => {
     if (digits.length === 0) return "";
@@ -149,15 +151,30 @@ const TimeWindowInput = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
+    const cursorPos = e.currentTarget.selectionStart || 0;
 
-    // Extract only digits
+    // Always extract digits for placeholder logic
     const digits = newValue.replace(/\D/g, "");
+    setRawDigits(digits);
 
-    // Format into time windows
-    const formatted = formatTimeWindows(digits);
+    // If user is deleting or editing, don't reformat immediately
+    if (newValue.length < inputValue.length) {
+      // User is deleting - allow free editing
+      setInputValue(newValue);
+      onChange(newValue);
+      return;
+    }
 
-    setInputValue(formatted);
-    onChange(formatted);
+    // Only auto-format when adding new digits
+    if (digits.length > rawDigits.length) {
+      const formatted = formatTimeWindows(digits);
+      setInputValue(formatted);
+      onChange(formatted);
+    } else {
+      // Just update the value without reformatting
+      setInputValue(newValue);
+      onChange(newValue);
+    }
   };
 
   const handleBlur = () => {
@@ -168,15 +185,78 @@ const TimeWindowInput = ({
     setIsFocused(true);
   };
 
+  const currentValue = isFocused ? inputValue : value;
+  const showPlaceholder = !currentValue || currentValue.trim() === "";
+
+  // Calculate how many characters from the placeholder should be consumed based on raw digits
+  const getRemainingPlaceholder = () => {
+    if (!placeholder || !rawDigits) return placeholder;
+
+    // Create a mapping of how many placeholder characters each digit should consume
+    // For "00:00–00:00, 00:00–00:00" and input like "12:00-1"
+    let consumedChars = 0;
+    let digitCount = 0;
+
+    // Map each digit to its corresponding position in the placeholder
+    const digitPositions = [];
+    for (let i = 0; i < placeholder.length; i++) {
+      if (/\d/.test(placeholder[i])) {
+        digitPositions.push(i);
+      }
+    }
+
+    // Calculate how many placeholder characters to consume
+    if (rawDigits.length <= digitPositions.length) {
+      consumedChars = digitPositions[rawDigits.length - 1] + 1;
+    }
+
+    // Get the remaining part and clean it up
+    const remaining = placeholder.substring(consumedChars);
+    // Only remove multiple consecutive spaces, preserve single intentional spaces
+    return remaining.replace(/\s{2,}/g, " ").trim();
+  };
+
   return (
-    <div>
+    <div className="relative">
+      {/* Background placeholder text */}
+      {placeholder && (
+        <div className="absolute inset-0 flex items-center px-3 text-muted-foreground pointer-events-none z-0 overflow-hidden">
+          {currentValue ? (
+            // Show placeholder with typed text overlaid
+            <span className="whitespace-nowrap overflow-hidden text-base md:text-sm font-normal">
+              <span
+                style={{
+                  color: "transparent",
+                  lineHeight: "1.5",
+                  verticalAlign: "top",
+                }}
+              >
+                {currentValue}
+              </span>
+              <span style={{ lineHeight: "1.5" }}>
+                {getRemainingPlaceholder()}
+              </span>
+            </span>
+          ) : (
+            // Show full placeholder when empty
+            <span
+              className="whitespace-nowrap overflow-hidden text-base md:text-sm font-normal"
+              style={{ lineHeight: "1.5" }}
+            >
+              {placeholder}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Input field positioned over the placeholder */}
       <Input
-        value={isFocused ? inputValue : value}
+        value={currentValue}
         onChange={handleInputChange}
         onBlur={handleBlur}
         onFocus={handleFocus}
-        placeholder={placeholder}
-        className={className}
+        className={cn(className, "relative z-10 bg-transparent")}
+        style={{ color: "inherit" }}
       />
     </div>
   );
@@ -596,7 +676,7 @@ export default function CadenceCreator() {
                         onChange={(value) =>
                           updateCadenceDay(index, "timeWindows", value)
                         }
-                        placeholder="10:00–12:00, 14:00–16:00"
+                        placeholder="00:00-00:00, 00:00-00:00"
                         className="mt-1"
                       />
                     </div>
