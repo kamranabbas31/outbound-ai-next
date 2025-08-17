@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,10 @@ import { cn } from "@/lib/utils";
 interface CadenceDay {
   day: number;
   attempts: number;
-  timeWindows: string;
+  timeWindows: {
+    from: string;
+    to: string;
+  }[];
 }
 
 interface CadenceTemplate {
@@ -28,236 +31,290 @@ interface CadenceTemplate {
   cadence_days: any[];
 }
 
-// Smart Time Window Input Component
-interface TimeWindowInputProps {
+// Time Input Component
+interface TimeInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  label: string;
 }
 
-const TimeWindowInput = ({
+const TimeInput = ({
   value,
   onChange,
   placeholder,
   className,
-}: TimeWindowInputProps) => {
-  const [inputValue, setInputValue] = useState(value);
-  const [isFocused, setIsFocused] = useState(false);
-  const [rawDigits, setRawDigits] = useState("");
+  label,
+}: TimeInputProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedHour, setSelectedHour] = useState("12");
+  const [selectedMinute, setSelectedMinute] = useState("00");
+  const [selectedPeriod, setSelectedPeriod] = useState("AM");
+  const [dropdownPosition, setDropdownPosition] = useState<"bottom" | "top">(
+    "bottom"
+  );
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const formatTimeWindows = (digits: string): string => {
-    if (digits.length === 0) return "";
+  // Parse the current value when component mounts or value changes
+  useEffect(() => {
+    if (value && value.trim() !== "") {
+      // Handle 24-hour format "HH:MM"
+      const [hour, minute] = value.split(":");
+      if (hour && minute) {
+        const hourNum = parseInt(hour);
+        let displayHour = hourNum;
+        let period = "AM";
 
-    let result = "";
-    let position = 0;
+        if (hourNum === 0) {
+          displayHour = 12;
+          period = "AM";
+        } else if (hourNum > 12) {
+          displayHour = hourNum - 12;
+          period = "PM";
+        } else if (hourNum === 12) {
+          period = "PM";
+        }
 
-    while (position < digits.length) {
-      // Start new time window
-      if (result && !result.endsWith(", ")) {
-        result += ", ";
+        setSelectedHour(displayHour.toString().padStart(2, "0"));
+        setSelectedMinute(minute);
+        setSelectedPeriod(period);
       }
-
-      // First hour (HH)
-      if (position < digits.length) {
-        let hour = parseInt(digits[position]);
-        if (hour > 2) hour = 0;
-        result += hour.toString();
-        position++;
-      }
-
-      // Second digit of hour
-      if (position < digits.length) {
-        let hour = parseInt(digits.substring(position - 1, position + 1));
-        if (hour > 23) hour = 0;
-        result =
-          result.substring(0, result.length - 1) +
-          hour.toString().padStart(2, "0");
-        position++;
-      }
-
-      // Add colon after hours
-      if (position < digits.length) {
-        result += ":";
-      }
-
-      // First digit of minutes
-      if (position < digits.length) {
-        let minute = parseInt(digits[position]);
-        if (minute > 5) minute = 0;
-        result += minute.toString();
-        position++;
-      }
-
-      // Second digit of minutes
-      if (position < digits.length) {
-        let minute = parseInt(digits.substring(position - 1, position + 1));
-        if (minute > 59) minute = 0;
-        result =
-          result.substring(0, result.length - 1) +
-          minute.toString().padStart(2, "0");
-        position++;
-      }
-
-      // Add dash for time range
-      if (position < digits.length) {
-        result += "-";
-      }
-
-      // Second hour (HH)
-      if (position < digits.length) {
-        let hour = parseInt(digits[position]);
-        if (hour > 2) hour = 0;
-        result += hour.toString();
-        position++;
-      }
-
-      // Second digit of second hour
-      if (position < digits.length) {
-        let hour = parseInt(digits.substring(position - 1, position + 1));
-        if (hour > 23) hour = 0;
-        result =
-          result.substring(0, result.length - 1) +
-          hour.toString().padStart(2, "0");
-        position++;
-      }
-
-      // Add colon after second hours
-      if (position < digits.length) {
-        result += ":";
-      }
-
-      // First digit of second minutes
-      if (position < digits.length) {
-        let minute = parseInt(digits[position]);
-        if (minute > 5) minute = 0;
-        result += minute.toString();
-        position++;
-      }
-
-      // Second digit of second minutes
-      if (position < digits.length) {
-        let minute = parseInt(digits.substring(position - 1, position + 1));
-        if (minute > 59) minute = 0;
-        result =
-          result.substring(0, result.length - 1) +
-          minute.toString().padStart(2, "0");
-        position++;
-      }
-    }
-
-    return result;
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    const cursorPos = e.currentTarget.selectionStart || 0;
-
-    // Always extract digits for placeholder logic
-    const digits = newValue.replace(/\D/g, "");
-    setRawDigits(digits);
-
-    // If user is deleting or editing, don't reformat immediately
-    if (newValue.length < inputValue.length) {
-      // User is deleting - allow free editing
-      setInputValue(newValue);
-      onChange(newValue);
-      return;
-    }
-
-    // Only auto-format when adding new digits
-    if (digits.length > rawDigits.length) {
-      const formatted = formatTimeWindows(digits);
-      setInputValue(formatted);
-      onChange(formatted);
     } else {
-      // Just update the value without reformatting
-      setInputValue(newValue);
-      onChange(newValue);
+      // Reset to default values if no value
+      setSelectedHour("12");
+      setSelectedMinute("00");
+      setSelectedPeriod("AM");
     }
-  };
+  }, [value]);
 
-  const handleBlur = () => {
-    setIsFocused(false);
-  };
-
-  const handleFocus = () => {
-    setIsFocused(true);
-  };
-
-  const currentValue = isFocused ? inputValue : value;
-  const showPlaceholder = !currentValue || currentValue.trim() === "";
-
-  // Calculate how many characters from the placeholder should be consumed based on raw digits
-  const getRemainingPlaceholder = () => {
-    if (!placeholder || !rawDigits) return placeholder;
-
-    // Create a mapping of how many placeholder characters each digit should consume
-    // For "00:00–00:00, 00:00–00:00" and input like "12:00-1"
-    let consumedChars = 0;
-    let digitCount = 0;
-
-    // Map each digit to its corresponding position in the placeholder
-    const digitPositions = [];
-    for (let i = 0; i < placeholder.length; i++) {
-      if (/\d/.test(placeholder[i])) {
-        digitPositions.push(i);
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
       }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
-    // Calculate how many placeholder characters to consume
-    if (rawDigits.length <= digitPositions.length) {
-      consumedChars = digitPositions[rawDigits.length - 1] + 1;
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const calculateDropdownPosition = () => {
+    if (!inputRef.current) return "bottom";
+
+    const inputRect = inputRef.current.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const dropdownHeight = 280; // Approximate height of the dropdown
+
+    // Check if there's enough space below
+    const spaceBelow = viewportHeight - inputRect.bottom;
+    const spaceAbove = inputRect.top;
+
+    // If there's more space above than below, or not enough space below, open upward
+    if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+      return "top";
     }
 
-    // Get the remaining part and clean it up
-    const remaining = placeholder.substring(consumedChars);
-    // Only remove multiple consecutive spaces, preserve single intentional spaces
-    return remaining.replace(/\s{2,}/g, " ").trim();
+    return "bottom";
+  };
+
+  const handleInputClick = () => {
+    const position = calculateDropdownPosition();
+    setDropdownPosition(position);
+    setIsOpen(!isOpen);
+  };
+
+  const handleTimeChange = (hour: string, minute: string, period: string) => {
+    // Convert to 24-hour format for storage
+    let hour24 = parseInt(hour);
+    if (period === "PM" && hour24 !== 12) {
+      hour24 += 12;
+    } else if (period === "AM" && hour24 === 12) {
+      hour24 = 0;
+    }
+
+    const timeString = `${hour24.toString().padStart(2, "0")}:${minute}`;
+    onChange(timeString);
+    setIsOpen(false);
+  };
+
+  const hours = Array.from({ length: 12 }, (_, i) =>
+    (i + 1).toString().padStart(2, "0")
+  );
+  // 15-minute intervals: 00, 15, 30, 45
+  const minutes = ["00", "15", "30", "45"];
+  const periods = ["AM", "PM"];
+
+  // Format display value
+  const getDisplayValue = () => {
+    if (!value || value.trim() === "") return "--:-- --";
+
+    // Handle 24-hour format "HH:MM"
+    const [hour, minute] = value.split(":");
+    if (hour && minute) {
+      const hourNum = parseInt(hour);
+      let displayHour = hourNum;
+      let period = "AM";
+
+      if (hourNum === 0) {
+        displayHour = 12;
+        period = "AM";
+      } else if (hourNum > 12) {
+        displayHour = hourNum - 12;
+        period = "PM";
+      } else if (hourNum === 12) {
+        period = "PM";
+      }
+
+      return `${displayHour.toString().padStart(2, "0")}:${minute} ${period}`;
+    }
+
+    return value;
   };
 
   return (
-    <div className="relative">
-      {/* Background placeholder text */}
-      {placeholder && (
-        <div className="absolute inset-0 flex items-center px-3 text-muted-foreground pointer-events-none z-0 overflow-hidden">
-          {currentValue ? (
-            // Show placeholder with typed text overlaid
-            <span className="whitespace-nowrap overflow-hidden text-base md:text-sm font-normal">
-              <span
-                style={{
-                  color: "transparent",
-                  lineHeight: "1.5",
-                  verticalAlign: "top",
-                }}
-              >
-                {currentValue}
-              </span>
-              <span style={{ lineHeight: "1.5" }}>
-                {getRemainingPlaceholder()}
-              </span>
-            </span>
-          ) : (
-            // Show full placeholder when empty
-            <span
-              className="whitespace-nowrap overflow-hidden text-base md:text-sm font-normal"
-              style={{ lineHeight: "1.5" }}
-            >
-              {placeholder}
-            </span>
-          )}
-        </div>
-      )}
+    <div className="space-y-2">
+      <Label className="text-xs text-muted-foreground">
+        {label} <span className="text-red-500">*</span>
+      </Label>
+      <div className="relative" ref={dropdownRef}>
+        <Input
+          ref={inputRef}
+          type="text"
+          value={getDisplayValue()}
+          onClick={handleInputClick}
+          readOnly
+          className={cn(className, "cursor-pointer")}
+          required
+        />
 
-      {/* Input field positioned over the placeholder */}
-      <Input
-        value={currentValue}
-        onChange={handleInputChange}
-        onBlur={handleBlur}
-        onFocus={handleFocus}
-        className={cn(className, "relative z-10 bg-transparent")}
-        style={{ color: "inherit" }}
-      />
+        {isOpen && (
+          <div
+            className={cn(
+              "absolute left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3 min-w-[280px]",
+              dropdownPosition === "bottom"
+                ? "top-full mt-1"
+                : "bottom-full mb-1"
+            )}
+          >
+            {/* Selected Time Display */}
+            <div className="flex gap-2 mb-3 pb-3 border-b">
+              <div className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm font-medium cursor-pointer">
+                {selectedHour}
+              </div>
+              <div className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm font-medium cursor-pointer">
+                {selectedMinute}
+              </div>
+              <div className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm font-medium cursor-pointer">
+                {selectedPeriod}
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              {/* Hours */}
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-gray-500 mb-2">
+                  Hour
+                </div>
+                <div className="max-h-32 overflow-y-auto">
+                  {hours.map((hour) => (
+                    <div
+                      key={hour}
+                      onClick={() => setSelectedHour(hour)}
+                      className={cn(
+                        "px-3 py-1 text-sm cursor-pointer rounded",
+                        selectedHour === hour
+                          ? "bg-primary text-primary-foreground hover:bg-primary/80"
+                          : "text-black hover:bg-primary/10"
+                      )}
+                    >
+                      {hour}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Minutes - 15-minute intervals */}
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-gray-500 mb-2">
+                  Minute
+                </div>
+                <div className="space-y-1">
+                  {minutes.map((minute) => (
+                    <div
+                      key={minute}
+                      onClick={() => setSelectedMinute(minute)}
+                      className={cn(
+                        "px-3 py-1 text-sm cursor-pointer rounded",
+                        selectedMinute === minute
+                          ? "bg-primary text-primary-foreground hover:bg-primary/80"
+                          : "text-black hover:bg-primary/10"
+                      )}
+                    >
+                      {minute}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* AM/PM */}
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-gray-500 mb-2">
+                  Period
+                </div>
+                <div className="space-y-1">
+                  {periods.map((period) => (
+                    <div
+                      key={period}
+                      onClick={() => setSelectedPeriod(period)}
+                      className={cn(
+                        "px-3 py-1 text-sm cursor-pointer rounded",
+                        selectedPeriod === period
+                          ? "bg-primary text-primary-foreground hover:bg-primary/80"
+                          : "text-black hover:bg-primary/10"
+                      )}
+                    >
+                      {period}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsOpen(false)}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() =>
+                  handleTimeChange(selectedHour, selectedMinute, selectedPeriod)
+                }
+                className="text-xs"
+              >
+                Apply
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -285,7 +342,7 @@ export default function CadenceCreator() {
   const [cadenceName, setCadenceName] = useState("");
   const [retryDispositions, setRetryDispositions] = useState<string[]>([]);
   const [cadenceDays, setCadenceDays] = useState<CadenceDay[]>([
-    { day: 1, attempts: 1, timeWindows: "" },
+    { day: 1, attempts: 1, timeWindows: [{ from: "", to: "" }] },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -337,8 +394,11 @@ export default function CadenceCreator() {
                   day: parseInt(day) || 1,
                   attempts: dayData.attempts || 1,
                   timeWindows: Array.isArray(dayData.time_windows)
-                    ? dayData.time_windows.join(", ")
-                    : "",
+                    ? dayData.time_windows.map((tw) => ({
+                        from: tw.split("-")[0],
+                        to: tw.split("-")[1],
+                      }))
+                    : [],
                 };
               });
             setCadenceDays(convertedDays);
@@ -365,7 +425,7 @@ export default function CadenceCreator() {
     const maxDay = Math.max(...cadenceDays.map((d) => d.day), 0);
     setCadenceDays((prev) => [
       ...prev,
-      { day: maxDay + 1, attempts: 1, timeWindows: "" },
+      { day: maxDay + 1, attempts: 1, timeWindows: [{ from: "", to: "" }] },
     ]);
   };
 
@@ -381,6 +441,52 @@ export default function CadenceCreator() {
     setCadenceDays((prev) =>
       prev.map((day, i) => (i === index ? { ...day, [field]: value } : day))
     );
+  };
+
+  const addTimeWindow = (dayIndex: number) => {
+    setCadenceDays((prev) =>
+      prev.map((day, i) =>
+        i === dayIndex
+          ? { ...day, timeWindows: [...day.timeWindows, { from: "", to: "" }] }
+          : day
+      )
+    );
+  };
+
+  const removeTimeWindow = (dayIndex: number, timeWindowIndex: number) => {
+    setCadenceDays((prev) =>
+      prev.map((day, i) =>
+        i === dayIndex
+          ? {
+              ...day,
+              timeWindows: day.timeWindows.filter(
+                (_, twi) => twi !== timeWindowIndex
+              ),
+            }
+          : day
+      )
+    );
+  };
+
+  const updateTimeWindow = (
+    dayIndex: number,
+    timeWindowIndex: number,
+    field: "from" | "to",
+    value: string
+  ) => {
+    setCadenceDays((prev) => {
+      const newState = prev.map((day, i) =>
+        i === dayIndex
+          ? {
+              ...day,
+              timeWindows: day.timeWindows.map((tw, twi) =>
+                twi === timeWindowIndex ? { ...tw, [field]: value } : tw
+              ),
+            }
+          : day
+      );
+      return newState;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -404,7 +510,9 @@ export default function CadenceCreator() {
 
     // Check if any time windows are empty
     const hasEmptyTimeWindows = cadenceDays.some(
-      (day) => !day.timeWindows.trim()
+      (day) =>
+        day.timeWindows.length === 0 ||
+        day.timeWindows.some((tw) => !tw.from || !tw.to)
     );
     if (hasEmptyTimeWindows) {
       toast.error("Please fill in time windows for all cadence days");
@@ -420,28 +528,17 @@ export default function CadenceCreator() {
       hasError = true;
     }
 
-    // Validate time window format for each day
+    // Validate time windows for each day
     const hasInvalidTimeWindows = cadenceDays.some((day) => {
-      if (!day.timeWindows.trim()) return false;
+      return day.timeWindows.some((timeWindow) => {
+        if (!timeWindow.from || !timeWindow.to) return true;
 
-      const timeWindows = day.timeWindows
-        .split(",")
-        .map((tw) => tw.trim())
-        .filter((tw) => tw.length > 0);
+        // Convert times to minutes for comparison
+        const [startHour, startMinute] = timeWindow.from.split(":").map(Number);
+        const [endHour, endMinute] = timeWindow.to.split(":").map(Number);
 
-      return timeWindows.some((timeWindow) => {
-        // Check if time window follows HH:MM-HH:MM format
-        const timePattern = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
-        if (!timePattern.test(timeWindow)) return true;
-
-        // Check if time difference is at least 30 minutes
-        const [startTime, endTime] = timeWindow.split("-");
-        const startMinutes =
-          parseInt(startTime.split(":")[0]) * 60 +
-          parseInt(startTime.split(":")[1]);
-        const endMinutes =
-          parseInt(endTime.split(":")[0]) * 60 +
-          parseInt(endTime.split(":")[1]);
+        const startMinutes = startHour * 60 + startMinute;
+        const endMinutes = endHour * 60 + endMinute;
 
         // Handle case where end time is on the next day
         const timeDifference =
@@ -449,6 +546,7 @@ export default function CadenceCreator() {
             ? endMinutes - startMinutes
             : 24 * 60 - startMinutes + endMinutes;
 
+        // Check if time difference is at least 30 minutes
         if (timeDifference < 30) {
           return true;
         }
@@ -459,7 +557,7 @@ export default function CadenceCreator() {
 
     if (hasInvalidTimeWindows) {
       toast.error(
-        "Each time window must be at least 30 minutes long and in proper format (HH:MM-HH:MM). Complete all time windows before saving."
+        "Each time window must be at least 30 minutes long. Complete all time windows before saving."
       );
       hasError = true;
     }
@@ -471,15 +569,37 @@ export default function CadenceCreator() {
     setIsSubmitting(true);
 
     try {
+      // Convert 24-hour times to 12-hour format with AM/PM for database storage
+      const convertTo12HourFormat = (time24: string) => {
+        const [hour, minute] = time24.split(":");
+        const hourNum = parseInt(hour);
+        let displayHour = hourNum;
+        let period = "AM";
+
+        if (hourNum === 0) {
+          displayHour = 12;
+          period = "AM";
+        } else if (hourNum > 12) {
+          displayHour = hourNum - 12;
+          period = "PM";
+        } else if (hourNum === 12) {
+          period = "PM";
+        }
+
+        return `${displayHour.toString().padStart(2, "0")}:${minute} ${period}`;
+      };
+
       // Convert cadenceDays into required array of { day, config }
       const cadence_days = cadenceDays.map((day) => ({
         day: day.day.toString(),
         config: {
           attempts: day.attempts,
-          time_windows: day.timeWindows
-            .split(",")
-            .map((tw) => tw.trim())
-            .filter((tw) => tw.length > 0),
+          time_windows: day.timeWindows.map(
+            (tw) =>
+              `${convertTo12HourFormat(tw.from)}-${convertTo12HourFormat(
+                tw.to
+              )}`
+          ),
         },
       }));
 
@@ -546,8 +666,8 @@ export default function CadenceCreator() {
 
       <form onSubmit={handleSubmit}>
         {isLoading && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-blue-800">Loading cadence template...</p>
+          <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <p className="text-purple-800">Loading cadence template...</p>
           </div>
         )}
 
@@ -621,76 +741,137 @@ export default function CadenceCreator() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {cadenceDays.map((day, index) => (
+                {cadenceDays.map((day, dayIndex) => (
                   <div
-                    key={index}
-                    className="flex items-center gap-4 p-4 border rounded-lg"
+                    key={dayIndex}
+                    className="p-4 border rounded-lg space-y-4"
                   >
-                    <div className="flex-1">
-                      <Label className="text-xs text-muted-foreground">
-                        Day Number <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="90"
-                        value={day.day}
-                        onChange={(e) =>
-                          updateCadenceDay(
-                            index,
-                            "day",
-                            parseInt(e.target.value) || 1
-                          )
-                        }
-                        className="mt-1"
-                        required
-                        disabled={isLoading}
-                      />
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <Label className="text-xs text-muted-foreground">
+                          Day Number <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="90"
+                          value={day.day}
+                          onChange={(e) =>
+                            updateCadenceDay(
+                              dayIndex,
+                              "day",
+                              parseInt(e.target.value) || 1
+                            )
+                          }
+                          className="mt-1"
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-xs text-muted-foreground">
+                          Attempts <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={day.attempts}
+                          onChange={(e) =>
+                            updateCadenceDay(
+                              dayIndex,
+                              "attempts",
+                              parseInt(e.target.value) || 1
+                            )
+                          }
+                          className="mt-1"
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
+                      {cadenceDays.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeCadenceDay(dayIndex)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <Label className="text-xs text-muted-foreground">
-                        Attempts <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={day.attempts}
-                        onChange={(e) =>
-                          updateCadenceDay(
-                            index,
-                            "attempts",
-                            parseInt(e.target.value) || 1
-                          )
-                        }
-                        className="mt-1"
-                        required
-                        disabled={isLoading}
-                      />
+
+                    {/* Time Windows */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium">
+                            Time Windows <span className="text-red-500">*</span>
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            All times are in EST
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addTimeWindow(dayIndex)}
+                          className="text-xs"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Time Window
+                        </Button>
+                      </div>
+
+                      {day.timeWindows.map((timeWindow, timeWindowIndex) => (
+                        <div
+                          key={timeWindowIndex}
+                          className="flex items-center gap-3 p-3 border rounded-md bg-gray-50"
+                        >
+                          <TimeInput
+                            value={timeWindow.from}
+                            onChange={(value) =>
+                              updateTimeWindow(
+                                dayIndex,
+                                timeWindowIndex,
+                                "from",
+                                value
+                              )
+                            }
+                            label="From"
+                            className="flex-1"
+                          />
+                          <TimeInput
+                            value={timeWindow.to}
+                            onChange={(value) =>
+                              updateTimeWindow(
+                                dayIndex,
+                                timeWindowIndex,
+                                "to",
+                                value
+                              )
+                            }
+                            label="To"
+                            className="flex-1"
+                          />
+                          {day.timeWindows.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                removeTimeWindow(dayIndex, timeWindowIndex)
+                              }
+                              className="text-destructive hover:text-destructive mt-6"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex-2">
-                      <Label className="text-xs text-muted-foreground">
-                        Time Windows <span className="text-red-500">*</span>
-                      </Label>
-                      <TimeWindowInput
-                        value={day.timeWindows}
-                        onChange={(value) =>
-                          updateCadenceDay(index, "timeWindows", value)
-                        }
-                        placeholder="00:00-00:00, 00:00-00:00"
-                        className="mt-1"
-                      />
-                    </div>
-                    {cadenceDays.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeCadenceDay(index)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
                 ))}
 
@@ -705,7 +886,7 @@ export default function CadenceCreator() {
                 </Button>
 
                 <p className="text-sm text-muted-foreground">
-                  All time windows are in EST
+                  All times are in EST
                 </p>
               </div>
             </CardContent>

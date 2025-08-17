@@ -47,7 +47,7 @@ interface CadenceTemplate {
 
 const Cadences = () => {
   const router = useRouter();
-  
+
   // queries and mutations
   const [fetchCadenceTemplatesQuery] = useCadenceTemplatesLazyQuery();
   const [deleteCadenceTemplateMutation] = useDeleteCadenceTemplateMutation();
@@ -171,16 +171,16 @@ const Cadences = () => {
         },
       });
 
-             if (!data?.createCadenceTemplate?.userError?.message) {
-         toast.success("Cadence cloned successfully!");
-         // Refresh the cadences list
-         fetchCadences();
-         // Close the dialog if it's open
-         if (isDialogOpen) {
-           setIsDialogOpen(false);
-           setSelectedCadence(null);
-         }
-       } else {
+      if (!data?.createCadenceTemplate?.userError?.message) {
+        toast.success("Cadence cloned successfully!");
+        // Refresh the cadences list
+        fetchCadences();
+        // Close the dialog if it's open
+        if (isDialogOpen) {
+          setIsDialogOpen(false);
+          setSelectedCadence(null);
+        }
+      } else {
         toast.error(
           data?.createCadenceTemplate?.userError?.message ||
             "Failed to clone cadence"
@@ -237,7 +237,7 @@ const Cadences = () => {
                 <TableHead>Retry Dispositions</TableHead>
                 <TableHead>Total Days Defined</TableHead>
                 <TableHead>Campaigns Used In</TableHead>
-                                 <TableHead className="w-56">Actions</TableHead>
+                <TableHead className="w-56">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -276,35 +276,16 @@ const Cadences = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                                         <div className="flex gap-2">
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => handleViewDetails(cadence)}
-                         className="text-xs"
-                       >
-                         View Details
-                       </Button>
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => router.push(`/cadence-creator?id=${cadence.id}`)}
-                         className="text-xs"
-                       >
-                         <Edit className="h-4 w-4 mr-1" />
-                         Edit
-                       </Button>
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => handleCloneCadence(cadence)}
-                         disabled={isCloning}
-                         className="text-xs"
-                       >
-                         <Copy className="h-4 w-4 mr-1" />
-                         {isCloning ? "Cloning..." : "Clone"}
-                       </Button>
-                     </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewDetails(cadence)}
+                        className="text-xs"
+                      >
+                        View Details
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -367,40 +348,40 @@ const Cadences = () => {
                 )}
               </div>
 
-                             <div className="flex justify-end gap-2 pt-4 border-t">
-                 <Button
-                   variant="outline"
-                   onClick={() => {
-                     if (selectedCadence) {
-                       setIsDialogOpen(false);
-                       router.push(`/cadence-creator?id=${selectedCadence.id}`);
-                     }
-                   }}
-                 >
-                   <Edit className="h-4 w-4 mr-2" />
-                   Edit
-                 </Button>
-                 <Button
-                   variant="outline"
-                   onClick={() => {
-                     if (selectedCadence) {
-                       handleCloneCadence(selectedCadence);
-                     }
-                   }}
-                   disabled={isCloning}
-                 >
-                   <Copy className="h-4 w-4 mr-2" />
-                   {isCloning ? "Cloning..." : "Clone"}
-                 </Button>
-                 <Button
-                   variant="destructive"
-                   onClick={handleDeleteCadence}
-                   disabled={isDeleting}
-                 >
-                   <Trash2 className="h-4 w-4 mr-2" />
-                   {isDeleting ? "Deleting..." : "Delete Cadence"}
-                 </Button>
-               </div>
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (selectedCadence) {
+                      setIsDialogOpen(false);
+                      router.push(`/cadence-creator?id=${selectedCadence.id}`);
+                    }
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (selectedCadence) {
+                      handleCloneCadence(selectedCadence);
+                    }
+                  }}
+                  disabled={isCloning}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  {isCloning ? "Cloning..." : "Clone"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteCadence}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isDeleting ? "Deleting..." : "Delete Cadence"}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
