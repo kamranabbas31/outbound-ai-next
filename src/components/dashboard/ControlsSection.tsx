@@ -171,7 +171,7 @@ const ControlsSection: FC<ControlsSectionProps> = ({
                 </TooltipTrigger>
                 {activeCampaign?.cadence_template?.id && (
                   <TooltipContent>
-                    <p>Cadence will automatically execute the campaign</p>
+                    <p>Campaign will be executed by the cadence</p>
                   </TooltipContent>
                 )}
               </Tooltip>
