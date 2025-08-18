@@ -1104,9 +1104,6 @@ export const Dashboard: FC = () => {
                       </Popover>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p>From date cannot be before the To date</p>
-                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
@@ -1198,9 +1195,6 @@ export const Dashboard: FC = () => {
                       </Popover>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p>To date cannot be before the From date</p>
-                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
