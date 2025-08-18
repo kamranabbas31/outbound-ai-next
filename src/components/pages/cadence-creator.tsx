@@ -394,10 +394,44 @@ export default function CadenceCreator() {
                   day: parseInt(day) || 1,
                   attempts: dayData.attempts || 1,
                   timeWindows: Array.isArray(dayData.time_windows)
-                    ? dayData.time_windows.map((tw) => ({
-                        from: tw.split("-")[0],
-                        to: tw.split("-")[1],
-                      }))
+                    ? dayData.time_windows.map((tw) => {
+                        const [fromTime, toTime] = tw.split("-");
+
+                        // Convert 12-hour format back to 24-hour format for storage
+                        const convertTo24Hour = (timeStr: string) => {
+                          // Remove any existing AM/PM and convert to 24-hour
+                          const cleanTime = timeStr.replace(
+                            /\s*(AM|PM)\s*/gi,
+                            ""
+                          );
+                          const [hour, minute] = cleanTime.split(":");
+                          let hourNum = parseInt(hour);
+
+                          // If the original time had PM and wasn't 12, add 12 hours
+                          if (
+                            timeStr.toUpperCase().includes("PM") &&
+                            hourNum !== 12
+                          ) {
+                            hourNum += 12;
+                          }
+                          // If the original time had AM and was 12, make it 0
+                          if (
+                            timeStr.toUpperCase().includes("AM") &&
+                            hourNum === 12
+                          ) {
+                            hourNum = 0;
+                          }
+
+                          return `${hourNum
+                            .toString()
+                            .padStart(2, "0")}:${minute}`;
+                        };
+
+                        return {
+                          from: convertTo24Hour(fromTime),
+                          to: convertTo24Hour(toTime),
+                        };
+                      })
                     : [],
                 };
               });
