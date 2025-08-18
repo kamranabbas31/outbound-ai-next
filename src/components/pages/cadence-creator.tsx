@@ -569,37 +569,12 @@ export default function CadenceCreator() {
     setIsSubmitting(true);
 
     try {
-      // Convert 24-hour times to 12-hour format with AM/PM for database storage
-      const convertTo12HourFormat = (time24: string) => {
-        const [hour, minute] = time24.split(":");
-        const hourNum = parseInt(hour);
-        let displayHour = hourNum;
-        let period = "AM";
-
-        if (hourNum === 0) {
-          displayHour = 12;
-          period = "AM";
-        } else if (hourNum > 12) {
-          displayHour = hourNum - 12;
-          period = "PM";
-        } else if (hourNum === 12) {
-          period = "PM";
-        }
-
-        return `${displayHour.toString().padStart(2, "0")}:${minute} ${period}`;
-      };
-
       // Convert cadenceDays into required array of { day, config }
       const cadence_days = cadenceDays.map((day) => ({
         day: day.day.toString(),
         config: {
           attempts: day.attempts,
-          time_windows: day.timeWindows.map(
-            (tw) =>
-              `${convertTo12HourFormat(tw.from)}-${convertTo12HourFormat(
-                tw.to
-              )}`
-          ),
+          time_windows: day.timeWindows.map((tw) => `${tw.from}-${tw.to}`),
         },
       }));
 
