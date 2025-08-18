@@ -481,7 +481,20 @@ export const Dashboard: FC = () => {
                 cadenceStartDate:
                   activeCampaign?.cadence_start_date ||
                   (selectedCadence && selectedCadence !== "none"
-                    ? new Date().toISOString()
+                    ? (() => {
+                        const d = new Date();
+                        return new Date(
+                          Date.UTC(
+                            d.getFullYear(),
+                            d.getMonth(),
+                            d.getDate(),
+                            0,
+                            0,
+                            0,
+                            0
+                          )
+                        ).toISOString();
+                      })()
                     : undefined),
               },
             });
@@ -737,7 +750,19 @@ export const Dashboard: FC = () => {
             campaignId: managingCadenceFor,
             cadenceId: selectedCadence,
             ...(cadenceStartDate
-              ? { startDate: cadenceStartDate.toISOString() }
+              ? {
+                  startDate: new Date(
+                    Date.UTC(
+                      cadenceStartDate.getFullYear(),
+                      cadenceStartDate.getMonth(),
+                      cadenceStartDate.getDate(),
+                      0,
+                      0,
+                      0,
+                      0
+                    )
+                  ).toISOString(),
+                }
               : {}),
           },
         },
@@ -775,7 +800,19 @@ export const Dashboard: FC = () => {
         variables: {
           input: {
             id: activeCampaign.id,
-            cadence_start_date: date ? date.toISOString() : null,
+            cadence_start_date: date
+              ? new Date(
+                  Date.UTC(
+                    date.getFullYear(),
+                    date.getMonth(),
+                    date.getDate(),
+                    0,
+                    0,
+                    0,
+                    0
+                  )
+                ).toISOString()
+              : null,
           },
         },
       });
