@@ -60,26 +60,38 @@ const TimeInput = ({
   // Parse the current value when component mounts or value changes
   useEffect(() => {
     if (value && value.trim() !== "") {
-      // Handle 24-hour format "HH:MM"
-      const [hour, minute] = value.split(":");
-      if (hour && minute) {
-        const hourNum = parseInt(hour);
-        let displayHour = hourNum;
-        let period = "AM";
-
-        if (hourNum === 0) {
-          displayHour = 12;
-          period = "AM";
-        } else if (hourNum > 12) {
-          displayHour = hourNum - 12;
-          period = "PM";
-        } else if (hourNum === 12) {
-          period = "PM";
+      // Check if the value already contains AM/PM (from database)
+      if (value.includes("AM") || value.includes("PM")) {
+        // Extract time and period from "HH:MM AM/PM" format
+        const timeMatch = value.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+        if (timeMatch) {
+          const [, hour, minute, period] = timeMatch;
+          setSelectedHour(hour.padStart(2, "0"));
+          setSelectedMinute(minute);
+          setSelectedPeriod(period.toUpperCase());
         }
+      } else {
+        // Handle 24-hour format "HH:MM" (fallback)
+        const [hour, minute] = value.split(":");
+        if (hour && minute) {
+          const hourNum = parseInt(hour);
+          let displayHour = hourNum;
+          let period = "AM";
 
-        setSelectedHour(displayHour.toString().padStart(2, "0"));
-        setSelectedMinute(minute);
-        setSelectedPeriod(period);
+          if (hourNum === 0) {
+            displayHour = 12;
+            period = "AM";
+          } else if (hourNum > 12) {
+            displayHour = hourNum - 12;
+            period = "PM";
+          } else if (hourNum === 12) {
+            period = "PM";
+          }
+
+          setSelectedHour(displayHour.toString().padStart(2, "0"));
+          setSelectedMinute(minute);
+          setSelectedPeriod(period);
+        }
       }
     } else {
       // Reset to default values if no value
@@ -135,15 +147,8 @@ const TimeInput = ({
   };
 
   const handleTimeChange = (hour: string, minute: string, period: string) => {
-    // Convert to 24-hour format for storage
-    let hour24 = parseInt(hour);
-    if (period === "PM" && hour24 !== 12) {
-      hour24 += 12;
-    } else if (period === "AM" && hour24 === 12) {
-      hour24 = 0;
-    }
-
-    const timeString = `${hour24.toString().padStart(2, "0")}:${minute}`;
+    // Store in 12-hour format with AM/PM
+    const timeString = `${hour}:${minute} ${period}`;
     onChange(timeString);
     setIsOpen(false);
   };
@@ -159,7 +164,12 @@ const TimeInput = ({
   const getDisplayValue = () => {
     if (!value || value.trim() === "") return "--:-- --";
 
-    // Handle 24-hour format "HH:MM"
+    // If the value already contains AM/PM (from database), return as is
+    if (value.includes("AM") || value.includes("PM")) {
+      return value;
+    }
+
+    // Handle 24-hour format "HH:MM" (fallback)
     const [hour, minute] = value.split(":");
     if (hour && minute) {
       const hourNum = parseInt(hour);
@@ -394,44 +404,10 @@ export default function CadenceCreator() {
                   day: parseInt(day) || 1,
                   attempts: dayData.attempts || 1,
                   timeWindows: Array.isArray(dayData.time_windows)
-                    ? dayData.time_windows.map((tw) => {
-                        const [fromTime, toTime] = tw.split("-");
-
-                        // Convert 12-hour format back to 24-hour format for storage
-                        const convertTo24Hour = (timeStr: string) => {
-                          // Remove any existing AM/PM and convert to 24-hour
-                          const cleanTime = timeStr.replace(
-                            /\s*(AM|PM)\s*/gi,
-                            ""
-                          );
-                          const [hour, minute] = cleanTime.split(":");
-                          let hourNum = parseInt(hour);
-
-                          // If the original time had PM and wasn't 12, add 12 hours
-                          if (
-                            timeStr.toUpperCase().includes("PM") &&
-                            hourNum !== 12
-                          ) {
-                            hourNum += 12;
-                          }
-                          // If the original time had AM and was 12, make it 0
-                          if (
-                            timeStr.toUpperCase().includes("AM") &&
-                            hourNum === 12
-                          ) {
-                            hourNum = 0;
-                          }
-
-                          return `${hourNum
-                            .toString()
-                            .padStart(2, "0")}:${minute}`;
-                        };
-
-                        return {
-                          from: convertTo24Hour(fromTime),
-                          to: convertTo24Hour(toTime),
-                        };
-                      })
+                    ? dayData.time_windows.map((tw) => ({
+                        from: tw.split("-")[0],
+                        to: tw.split("-")[1],
+                      }))
                     : [],
                 };
               });
@@ -567,12 +543,26 @@ export default function CadenceCreator() {
       return day.timeWindows.some((timeWindow) => {
         if (!timeWindow.from || !timeWindow.to) return true;
 
-        // Convert times to minutes for comparison
-        const [startHour, startMinute] = timeWindow.from.split(":").map(Number);
-        const [endHour, endMinute] = timeWindow.to.split(":").map(Number);
+        // Convert 12-hour format with AM/PM to minutes for comparison
+        const convertToMinutes = (timeStr: string) => {
+          const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+          if (timeMatch) {
+            const [, hour, minute, period] = timeMatch;
+            let hourNum = parseInt(hour);
 
-        const startMinutes = startHour * 60 + startMinute;
-        const endMinutes = endHour * 60 + endMinute;
+            if (period.toUpperCase() === "PM" && hourNum !== 12) {
+              hourNum += 12;
+            } else if (period.toUpperCase() === "AM" && hourNum === 12) {
+              hourNum = 0;
+            }
+
+            return hourNum * 60 + parseInt(minute);
+          }
+          return 0; // Return 0 if no valid time found
+        };
+
+        const startMinutes = convertToMinutes(timeWindow.from);
+        const endMinutes = convertToMinutes(timeWindow.to);
 
         // Handle case where end time is on the next day
         const timeDifference =
