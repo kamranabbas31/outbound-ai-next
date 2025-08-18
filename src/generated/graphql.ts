@@ -94,7 +94,7 @@ export type CadenceTemplatesResponse = {
 export type Campaign = {
   __typename?: 'Campaign';
   cadence_completed?: Maybe<Scalars['Boolean']['output']>;
-  cadence_progress: Array<CadenceProgress>;
+  cadence_progress?: Maybe<Array<Maybe<CadenceProgress>>>;
   cadence_start_date?: Maybe<Scalars['DateTime']['output']>;
   cadence_stopped?: Maybe<Scalars['Boolean']['output']>;
   cadence_template?: Maybe<CadenceTemplate>;
@@ -546,7 +546,7 @@ export type FetchCampaignsQueryVariables = Exact<{
 }>;
 
 
-export type FetchCampaignsQuery = { __typename?: 'Query', fetchCampaigns: { __typename?: 'CampaignListResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: Array<{ __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string } | null }> | null } };
+export type FetchCampaignsQuery = { __typename?: 'Query', fetchCampaigns: { __typename?: 'CampaignListResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: Array<{ __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string } | null, cadence_progress?: Array<{ __typename?: 'CadenceProgress', id: string, day: number, attempt: number, executed_at: string } | null> | null }> | null } };
 
 export type FetchLeadsForCampaignQueryVariables = Exact<{
   campaignId: Scalars['String']['input'];
@@ -1072,6 +1072,12 @@ export const FetchCampaignsDocument = gql`
       cadence_template {
         id
         name
+      }
+      cadence_progress {
+        id
+        day
+        attempt
+        executed_at
       }
     }
   }

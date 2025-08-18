@@ -576,7 +576,10 @@ export const Dashboard: FC = () => {
         sessionStorage.setItem("showUploadDialog", "true");
         sessionStorage.setItem("newCampaignId", newCampaignId);
       } else {
-        toast.error("Failed to create campaign");
+        toast.error(
+          result?.data?.createCampaign?.userError?.message ??
+            "Failed to create campaign"
+        );
       }
     } catch (error) {
       console.error("Error creating campaign:", error);

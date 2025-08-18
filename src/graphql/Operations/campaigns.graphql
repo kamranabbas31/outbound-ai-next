@@ -26,6 +26,12 @@ query FetchCampaigns($userId: String!) {
         id
         name
       }
+      cadence_progress {
+        id
+        day
+        attempt
+        executed_at
+      }
     }
   }
 }
