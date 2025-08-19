@@ -1,7 +1,23 @@
+import { FC } from "react";
+import {
+  Check,
+  Clock,
+  Phone,
+  AlertCircle,
+  Clock3,
+  DollarSign,
+} from "lucide-react";
+import StatCard from "@/components/StatCard";
 
-import { FC } from 'react';
-import { Check, Clock, Phone, AlertCircle, Clock3, DollarSign } from 'lucide-react';
-import StatCard from '@/components/StatCard';
+interface Campaign {
+  id: string;
+  name: string;
+  cadence_template?: {
+    id: string;
+    name: string;
+  } | null;
+  // Add other campaign properties as needed
+}
 
 interface StatsGridProps {
   stats: {
@@ -12,10 +28,15 @@ interface StatsGridProps {
     totalDuration: number;
     totalCost: number;
   };
+  activeCampaign?: Campaign | null;
+  onCompletedCallsClick?: () => void;
 }
 
-const StatsGrid: FC<StatsGridProps> = ({ stats }) => {
-
+const StatsGrid: FC<StatsGridProps> = ({
+  stats,
+  activeCampaign,
+  onCompletedCallsClick,
+}) => {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -25,6 +46,7 @@ const StatsGrid: FC<StatsGridProps> = ({ stats }) => {
           description="Successfully completed"
           icon={<Check className="h-5 w-5 text-green-500" />}
           variant="success"
+          onClick={activeCampaign?.cadence_template?.id ? onCompletedCallsClick : undefined}
         />
         <StatCard
           title="In Progress"

@@ -1,4 +1,3 @@
-
 import { FC, ReactNode } from "react";
 
 interface StatCardProps {
@@ -7,11 +6,24 @@ interface StatCardProps {
   description: string;
   icon: ReactNode;
   variant?: "success" | "info" | "warning" | "error" | "purple" | "orange";
+  onClick?: () => void;
 }
 
-const StatCard: FC<StatCardProps> = ({ title, value, description, icon, variant = "info" }) => {
+const StatCard: FC<StatCardProps> = ({
+  title,
+  value,
+  description,
+  icon,
+  variant = "info",
+  onClick,
+}) => {
   return (
-    <div className={`stats-card stats-card-${variant}`}>
+    <div
+      className={`stats-card stats-card-${variant} ${
+        onClick ? "cursor-pointer hover:shadow-lg transition-shadow" : ""
+      }`}
+      onClick={onClick}
+    >
       <div className="absolute top-6 right-6">{icon}</div>
       <div className="flex flex-col items-center">
         <h3 className="text-lg font-medium text-gray-600">{title}</h3>

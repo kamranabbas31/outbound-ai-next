@@ -3,11 +3,14 @@ import { FC, useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   CalendarIcon,
+  Check,
+  Clock,
   FileUp,
   Play,
   Settings,
   Square,
   Unlink,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +44,7 @@ import {
   useFetchLeadsForCampaignLazyQuery,
   useGetMultipleAvailablePhoneIdsLazyQuery,
   useGetTotalPagesForCampaignLazyQuery,
+  useGetCadenceProgressStatsLazyQuery,
   useStopCadenceMutation,
   useUpdateCampaignMutation,
 } from "@/generated/graphql";
@@ -127,6 +131,8 @@ export const Dashboard: FC = () => {
   const [fetchPhoneIds] = useGetMultipleAvailablePhoneIdsLazyQuery();
   const [fetchTotalPagesQuery] = useGetTotalPagesForCampaignLazyQuery();
   const [fetchCadenceTemplatesQuery] = useCadenceTemplatesLazyQuery();
+  const [fetchCadenceProgressStatsQuery] =
+    useGetCadenceProgressStatsLazyQuery();
 
   const router = useRouter();
   const params = useParams();
@@ -160,6 +166,19 @@ export const Dashboard: FC = () => {
     campaignId: string;
     cadenceId: string;
   } | null>(null);
+
+  // Completed calls modal state
+  const [showCompletedCallsDialog, setShowCompletedCallsDialog] =
+    useState(false);
+  const [cadenceProgressStats, setCadenceProgressStats] = useState<
+    {
+      day: number;
+      attempt: number;
+      timeWindow: string;
+      executedAt: string | null;
+      completedLeads: number;
+    }[]
+  >([]);
 
   // Calendar popover states
   const [isStartDatePopoverOpen, setIsStartDatePopoverOpen] = useState(false);
@@ -795,6 +814,35 @@ export const Dashboard: FC = () => {
     }
   };
 
+  const handleCompletedCallsClick = async () => {
+    setShowCompletedCallsDialog(true);
+
+    // Fetch cadence progress stats when modal opens
+    if (activeCampaign?.id) {
+      try {
+        const { data, error } = await fetchCadenceProgressStatsQuery({
+          variables: { campaignId: activeCampaign.id },
+          fetchPolicy: "network-only",
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        if (data?.getCadenceProgressStats?.userError) {
+          toast.error(data.getCadenceProgressStats.userError.message);
+          throw new Error(data.getCadenceProgressStats.userError.message);
+        }
+
+        const stats = data?.getCadenceProgressStats?.data || [];
+        setCadenceProgressStats(Array.isArray(stats) ? stats : []);
+      } catch (error) {
+        console.error("Error fetching cadence progress stats:", error);
+        toast.error("Failed to load cadence progress data");
+      }
+    }
+  };
+
   const handleUpdateStartDate = async (date: Date | undefined) => {
     if (!activeCampaign?.id) return;
 
@@ -1205,7 +1253,11 @@ export const Dashboard: FC = () => {
         </div>
       )}
 
-      <StatsGrid stats={stats} />
+      <StatsGrid
+        stats={stats}
+        activeCampaign={activeCampaign}
+        onCompletedCallsClick={handleCompletedCallsClick}
+      />
       {isViewingCampaign && activeCampaign && (
         <div className="bg-white shadow-sm rounded-lg border p-6">
           <div className="flex justify-between items-center">
@@ -1672,6 +1724,161 @@ export const Dashboard: FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Completed Calls Dialog */}
+      <Dialog
+        open={showCompletedCallsDialog}
+        onOpenChange={setShowCompletedCallsDialog}
+      >
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 font-bold">
+              <Clock className="h-5 w-5 text-blue-500" />
+              Cadence Execution Timeline For Campaign {activeCampaign?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Summary Stats */}
+
+            {/* Cadence Progress Timeline */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2"></h3>
+
+              {/* Dynamic data from backend */}
+              {activeCampaign?.cadence_template?.id ? (
+                <div className="space-y-3">
+                  {/* Display each attempt as individual cards */}
+                  {(() => {
+                    // Use real data from backend when available, otherwise show empty state
+                    if (
+                      !cadenceProgressStats ||
+                      cadenceProgressStats.length === 0
+                    ) {
+                      return (
+                        <div className="text-center py-8 text-gray-500">
+                          <Clock className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                          <p>No cadence execution data available yet</p>
+                        </div>
+                      );
+                    }
+
+                    // Sort attempts by day and attempt number
+                    const sortedAttempts = [...cadenceProgressStats].sort(
+                      (a, b) => {
+                        if (a.day !== b.day) return a.day - b.day;
+                        return a.attempt - b.attempt;
+                      }
+                    );
+
+                    // Render each attempt as a card
+                    return sortedAttempts.map((attempt) => {
+                      const isExecuted = !!attempt.executedAt;
+                      const executionTime = attempt.executedAt
+                        ? new Date(attempt.executedAt).toLocaleTimeString(
+                            "en-US",
+                            {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            }
+                          )
+                        : "Pending";
+
+                      return (
+                        <div
+                          key={`${attempt.day}-${attempt.attempt}`}
+                          className={`bg-white border rounded-lg p-4 shadow-sm ${
+                            isExecuted ? "" : "opacity-75"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold text-gray-900">
+                              Day {attempt.day} Attempt {attempt.attempt}
+                            </h4>
+                            <span
+                              className={`px-3 py-1 text-sm rounded-full font-medium ${
+                                isExecuted
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {isExecuted ? "Executed" : "Pending"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Time Window */}
+                            <div className="space-y-2">
+                              <div className="text-sm font-medium text-gray-700">
+                                Time Window
+                              </div>
+                              <div className="text-sm text-gray-900">
+                                {attempt.timeWindow}
+                              </div>
+                            </div>
+
+                            {/* Execution Time */}
+                            <div className="space-y-2">
+                              <div className="text-sm font-medium text-gray-700">
+                                Executed At
+                              </div>
+                              <div
+                                className={`text-sm ${
+                                  isExecuted ? "text-gray-900" : "text-gray-500"
+                                }`}
+                              >
+                                {executionTime}
+                              </div>
+                            </div>
+
+                            {/* Completed Leads */}
+                            <div className="space-y-2">
+                              <div className="text-sm font-medium text-gray-700">
+                                Completed Leads
+                              </div>
+                              <div
+                                className={`text-sm font-semibold ${
+                                  isExecuted
+                                    ? "text-green-600"
+                                    : "text-gray-500"
+                                }`}
+                              >
+                                {isExecuted
+                                  ? attempt.completedLeads
+                                  : "Pending"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Clock className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                  <p>No cadence template attached to this campaign</p>
+                  <p className="text-sm">
+                    Attach a cadence template to see execution timeline
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Performance Metrics */}
+          </div>
+
+          <DialogFooter className="mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowCompletedCallsDialog(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

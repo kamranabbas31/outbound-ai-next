@@ -57,6 +57,15 @@ export type CadenceAttachResponse = {
   userError?: Maybe<UserError>;
 };
 
+export type CadenceAttemptStats = {
+  __typename?: 'CadenceAttemptStats';
+  attempt: Scalars['Int']['output'];
+  completedLeads: Scalars['Int']['output'];
+  day: Scalars['Int']['output'];
+  executedAt: Scalars['String']['output'];
+  timeWindow: Scalars['String']['output'];
+};
+
 export type CadenceDayInput = {
   attempts: Scalars['Int']['input'];
   time_windows: Array<Scalars['String']['input']>;
@@ -73,6 +82,12 @@ export type CadenceProgress = {
   day: Scalars['Int']['output'];
   executed_at: Scalars['String']['output'];
   id: Scalars['String']['output'];
+};
+
+export type CadenceProgressStatsResponse = {
+  __typename?: 'CadenceProgressStatsResponse';
+  data?: Maybe<Array<CadenceAttemptStats>>;
+  userError?: Maybe<UserError>;
 };
 
 export type CadenceTemplate = {
@@ -353,6 +368,7 @@ export type Query = {
   fetchCampaigns: CampaignListResponse;
   fetchDashboardStats: DashboardStatsResponse;
   fetchLeadsForCampaign: LeadListResponse;
+  getCadenceProgressStats: CadenceProgressStatsResponse;
   getMultipleAvailablePhoneIds: Array<Scalars['String']['output']>;
   getTotalPagesForCampaign: CampaignLeadPaginationResult;
   leadActivityLogs: LeadActivityLogResponse;
@@ -393,6 +409,11 @@ export type QueryFetchLeadsForCampaignArgs = {
   searchTerm?: InputMaybe<Scalars['String']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
   take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryGetCadenceProgressStatsArgs = {
+  campaignId: Scalars['String']['input'];
 };
 
 
@@ -540,6 +561,13 @@ export type DeleteCadenceTemplateMutationVariables = Exact<{
 
 
 export type DeleteCadenceTemplateMutation = { __typename?: 'Mutation', deleteCadenceTemplate: { __typename?: 'DeleteCadenceTemplateResponse', success: boolean, userError?: { __typename?: 'UserError', message: string } | null } };
+
+export type GetCadenceProgressStatsQueryVariables = Exact<{
+  campaignId: Scalars['String']['input'];
+}>;
+
+
+export type GetCadenceProgressStatsQuery = { __typename?: 'Query', getCadenceProgressStats: { __typename?: 'CadenceProgressStatsResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: Array<{ __typename?: 'CadenceAttemptStats', day: number, attempt: number, timeWindow: string, executedAt: string, completedLeads: number }> | null } };
 
 export type FetchCampaignsQueryVariables = Exact<{
   userId: Scalars['String']['input'];
@@ -1048,6 +1076,55 @@ export function useDeleteCadenceTemplateMutation(baseOptions?: Apollo.MutationHo
 export type DeleteCadenceTemplateMutationHookResult = ReturnType<typeof useDeleteCadenceTemplateMutation>;
 export type DeleteCadenceTemplateMutationResult = Apollo.MutationResult<DeleteCadenceTemplateMutation>;
 export type DeleteCadenceTemplateMutationOptions = Apollo.BaseMutationOptions<DeleteCadenceTemplateMutation, DeleteCadenceTemplateMutationVariables>;
+export const GetCadenceProgressStatsDocument = gql`
+    query GetCadenceProgressStats($campaignId: String!) {
+  getCadenceProgressStats(campaignId: $campaignId) {
+    userError {
+      message
+    }
+    data {
+      day
+      attempt
+      timeWindow
+      executedAt
+      completedLeads
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetCadenceProgressStatsQuery__
+ *
+ * To run a query within a React component, call `useGetCadenceProgressStatsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetCadenceProgressStatsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetCadenceProgressStatsQuery({
+ *   variables: {
+ *      campaignId: // value for 'campaignId'
+ *   },
+ * });
+ */
+export function useGetCadenceProgressStatsQuery(baseOptions: Apollo.QueryHookOptions<GetCadenceProgressStatsQuery, GetCadenceProgressStatsQueryVariables> & ({ variables: GetCadenceProgressStatsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetCadenceProgressStatsQuery, GetCadenceProgressStatsQueryVariables>(GetCadenceProgressStatsDocument, options);
+      }
+export function useGetCadenceProgressStatsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetCadenceProgressStatsQuery, GetCadenceProgressStatsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetCadenceProgressStatsQuery, GetCadenceProgressStatsQueryVariables>(GetCadenceProgressStatsDocument, options);
+        }
+export function useGetCadenceProgressStatsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GetCadenceProgressStatsQuery, GetCadenceProgressStatsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GetCadenceProgressStatsQuery, GetCadenceProgressStatsQueryVariables>(GetCadenceProgressStatsDocument, options);
+        }
+export type GetCadenceProgressStatsQueryHookResult = ReturnType<typeof useGetCadenceProgressStatsQuery>;
+export type GetCadenceProgressStatsLazyQueryHookResult = ReturnType<typeof useGetCadenceProgressStatsLazyQuery>;
+export type GetCadenceProgressStatsSuspenseQueryHookResult = ReturnType<typeof useGetCadenceProgressStatsSuspenseQuery>;
+export type GetCadenceProgressStatsQueryResult = Apollo.QueryResult<GetCadenceProgressStatsQuery, GetCadenceProgressStatsQueryVariables>;
 export const FetchCampaignsDocument = gql`
     query FetchCampaigns($userId: String!) {
   fetchCampaigns(userId: $userId) {

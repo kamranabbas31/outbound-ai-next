@@ -65,3 +65,18 @@ mutation DeleteCadenceTemplate($id: String!) {
     success
   }
 }
+
+query GetCadenceProgressStats($campaignId: String!) {
+  getCadenceProgressStats(campaignId: $campaignId) {
+    userError {
+      message
+    }
+    data {
+      day
+      attempt
+      timeWindow
+      executedAt
+      completedLeads
+    }
+  }
+}
