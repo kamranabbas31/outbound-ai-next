@@ -279,6 +279,9 @@ export const Dashboard: FC = () => {
   const fetchCadences = useCallback(async () => {
     try {
       const { data, error } = await fetchCadenceTemplatesQuery({
+        variables: {
+          userId: userId!,
+        },
         fetchPolicy: "network-only",
       });
 
@@ -1774,16 +1777,7 @@ export const Dashboard: FC = () => {
                     // Render each attempt as a card
                     return sortedAttempts.map((attempt) => {
                       const isExecuted = !!attempt.executedAt;
-                      // const executionTime = attempt.executedAt
-                      //   ? new Date(attempt.executedAt).toLocaleTimeString(
-                      //       "en-US",
-                      //       {
-                      //         hour: "numeric",
-                      //         minute: "2-digit",
-                      //         hour12: true,
-                      //       }
-                      //     )
-                      //   : "Pending";
+
                       console.log({ attempt: attempt.executedAt });
                       return (
                         <div

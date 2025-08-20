@@ -26,6 +26,7 @@ input CadenceDaysInput {
 }
 
 input CreateCadenceTemplateInput {
+  userId: String!
   name: String!
   retry_dispositions: [String!]!
   cadence_days: [CadenceDaysInput!]!
@@ -33,6 +34,7 @@ input CreateCadenceTemplateInput {
 
 input UpdateCadenceTemplateInput {
   id: String!
+  userId: String!
   name: String
   retry_dispositions: [String!]
   cadence_days: [CadenceDaysInput!]
@@ -74,7 +76,7 @@ type CadenceProgressStatsResponse {
   data: [CadenceAttemptStats!]
 }
 type Query {
-  cadenceTemplates: CadenceTemplatesResponse!
+  cadenceTemplates(userId: String!): CadenceTemplatesResponse!
   getCadenceProgressStats(campaignId: String!): CadenceProgressStatsResponse!
 }
 

@@ -1,7 +1,7 @@
 # src/graphql/operations/cadence.graphql
 
-query CadenceTemplates {
-  cadenceTemplates {
+query CadenceTemplates($userId: String!) {
+  cadenceTemplates(userId: $userId) {
     userError {
       message
     }

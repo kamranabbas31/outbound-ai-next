@@ -169,6 +169,7 @@ export type CreateCadenceTemplateInput = {
   cadence_days: Array<CadenceDaysInput>;
   name: Scalars['String']['input'];
   retry_dispositions: Array<Scalars['String']['input']>;
+  userId: Scalars['String']['input'];
 };
 
 export type CreateCadenceTemplateResponse = {
@@ -375,6 +376,11 @@ export type Query = {
 };
 
 
+export type QueryCadenceTemplatesArgs = {
+  userId: Scalars['String']['input'];
+};
+
+
 export type QueryFetchBillingDataArgs = {
   end: Scalars['String']['input'];
   start: Scalars['String']['input'];
@@ -455,6 +461,7 @@ export type UpdateCadenceTemplateInput = {
   id: Scalars['String']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
   retry_dispositions?: InputMaybe<Array<Scalars['String']['input']>>;
+  userId: Scalars['String']['input'];
 };
 
 export type UpdateCadenceTemplateResponse = {
@@ -536,7 +543,9 @@ export type FetchBillingDataQueryVariables = Exact<{
 
 export type FetchBillingDataQuery = { __typename?: 'Query', fetchBillingData: { __typename?: 'BillingStatsResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: { __typename?: 'BillingStats', totalCalls: number, totalMinutes: number, totalCost: number } | null } };
 
-export type CadenceTemplatesQueryVariables = Exact<{ [key: string]: never; }>;
+export type CadenceTemplatesQueryVariables = Exact<{
+  userId: Scalars['String']['input'];
+}>;
 
 
 export type CadenceTemplatesQuery = { __typename?: 'Query', cadenceTemplates: { __typename?: 'CadenceTemplatesResponse', userError?: { __typename?: 'UserError', message: string } | null, templates?: Array<{ __typename?: 'CadenceTemplate', id: string, name: string, retry_dispositions: Array<string>, cadence_days: any, created_at: any, campaigns: Array<{ __typename?: 'Campaign', id: string, name: string }> }> | null } };
@@ -897,8 +906,8 @@ export type FetchBillingDataLazyQueryHookResult = ReturnType<typeof useFetchBill
 export type FetchBillingDataSuspenseQueryHookResult = ReturnType<typeof useFetchBillingDataSuspenseQuery>;
 export type FetchBillingDataQueryResult = Apollo.QueryResult<FetchBillingDataQuery, FetchBillingDataQueryVariables>;
 export const CadenceTemplatesDocument = gql`
-    query CadenceTemplates {
-  cadenceTemplates {
+    query CadenceTemplates($userId: String!) {
+  cadenceTemplates(userId: $userId) {
     userError {
       message
     }
@@ -929,10 +938,11 @@ export const CadenceTemplatesDocument = gql`
  * @example
  * const { data, loading, error } = useCadenceTemplatesQuery({
  *   variables: {
+ *      userId: // value for 'userId'
  *   },
  * });
  */
-export function useCadenceTemplatesQuery(baseOptions?: Apollo.QueryHookOptions<CadenceTemplatesQuery, CadenceTemplatesQueryVariables>) {
+export function useCadenceTemplatesQuery(baseOptions: Apollo.QueryHookOptions<CadenceTemplatesQuery, CadenceTemplatesQueryVariables> & ({ variables: CadenceTemplatesQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<CadenceTemplatesQuery, CadenceTemplatesQueryVariables>(CadenceTemplatesDocument, options);
       }

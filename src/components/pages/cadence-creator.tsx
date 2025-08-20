@@ -14,6 +14,8 @@ import {
   useCadenceTemplatesLazyQuery,
 } from "@/generated/graphql";
 import { cn } from "@/lib/utils";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 interface CadenceDay {
   day: number;
@@ -359,6 +361,8 @@ export default function CadenceCreator() {
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const userId = useSelector((state: RootState) => state.auth.user?.id);
+
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -375,7 +379,9 @@ export default function CadenceCreator() {
     setIsLoading(true);
     try {
       const { data } = await fetchCadenceTemplate({
-        variables: {},
+        variables: {
+          userId: userId!,
+        },
         fetchPolicy: "network-only",
       });
 
@@ -607,6 +613,7 @@ export default function CadenceCreator() {
           variables: {
             input: {
               id: templateId!,
+              userId: userId!,
               name: cadenceName,
               retry_dispositions: retryDispositions,
               cadence_days,
@@ -627,6 +634,7 @@ export default function CadenceCreator() {
         const { data } = await createCadenceTemplate({
           variables: {
             input: {
+              userId: userId!,
               name: cadenceName,
               retry_dispositions: retryDispositions,
               cadence_days,

@@ -26,6 +26,8 @@ import {
   useDeleteCadenceTemplateMutation,
   useCreateCadenceTemplateMutation,
 } from "@/generated/graphql";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 // Replace with your actual type based on your NestJS response
 interface CadenceTemplate {
@@ -53,6 +55,7 @@ const Cadences = () => {
   const [deleteCadenceTemplateMutation] = useDeleteCadenceTemplateMutation();
   const [createCadenceTemplateMutation] = useCreateCadenceTemplateMutation();
 
+  const userId = useSelector((state: RootState) => state.auth.user?.id);
   // State management for cadences and dialog
   const [cadences, setCadences] = useState<CadenceTemplate[]>([]);
   const [selectedCadence, setSelectedCadence] =
@@ -69,6 +72,9 @@ const Cadences = () => {
   const fetchCadences = async () => {
     try {
       const { data, error } = await fetchCadenceTemplatesQuery({
+        variables: {
+          userId: userId!,
+        },
         fetchPolicy: "network-only",
       });
 
@@ -165,6 +171,7 @@ const Cadences = () => {
         variables: {
           input: {
             name: `${cadence.name}-Copy`,
+            userId: userId!,
             retry_dispositions: cadence.retry_dispositions,
             cadence_days,
           },
