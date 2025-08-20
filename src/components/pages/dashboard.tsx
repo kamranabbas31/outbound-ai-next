@@ -1774,17 +1774,17 @@ export const Dashboard: FC = () => {
                     // Render each attempt as a card
                     return sortedAttempts.map((attempt) => {
                       const isExecuted = !!attempt.executedAt;
-                      const executionTime = attempt.executedAt
-                        ? new Date(attempt.executedAt).toLocaleTimeString(
-                            "en-US",
-                            {
-                              hour: "numeric",
-                              minute: "2-digit",
-                              hour12: true,
-                            }
-                          )
-                        : "Pending";
-
+                      // const executionTime = attempt.executedAt
+                      //   ? new Date(attempt.executedAt).toLocaleTimeString(
+                      //       "en-US",
+                      //       {
+                      //         hour: "numeric",
+                      //         minute: "2-digit",
+                      //         hour12: true,
+                      //       }
+                      //     )
+                      //   : "Pending";
+                      console.log({ attempt: attempt.executedAt });
                       return (
                         <div
                           key={`${attempt.day}-${attempt.attempt}`}
@@ -1828,7 +1828,7 @@ export const Dashboard: FC = () => {
                                   isExecuted ? "text-gray-900" : "text-gray-500"
                                 }`}
                               >
-                                {formatDateTime(executionTime.toString())}
+                                {formatDateTime(attempt.executedAt?.toString())}
                               </div>
                             </div>
 
