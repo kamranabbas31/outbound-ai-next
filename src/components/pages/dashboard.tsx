@@ -1828,7 +1828,7 @@ export const Dashboard: FC = () => {
                                   isExecuted ? "text-gray-900" : "text-gray-500"
                                 }`}
                               >
-                                {executionTime}
+                                {formatDateTime(executionTime)}
                               </div>
                             </div>
 

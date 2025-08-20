@@ -46,7 +46,11 @@ const StatsGrid: FC<StatsGridProps> = ({
           description="Successfully completed"
           icon={<Check className="h-5 w-5 text-green-500" />}
           variant="success"
-          onClick={activeCampaign?.cadence_template?.id ? onCompletedCallsClick : undefined}
+          onClick={
+            activeCampaign?.cadence_template?.id
+              ? onCompletedCallsClick
+              : undefined
+          }
         />
         <StatCard
           title="In Progress"
