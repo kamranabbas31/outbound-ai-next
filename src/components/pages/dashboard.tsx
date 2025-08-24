@@ -110,9 +110,19 @@ export interface Campaign {
   cadence_template?: {
     id: string;
     name: string;
+    cadence_days: any;
   } | null;
+  cadence_progress?: Array<{
+    day: number;
+    attempt: number;
+    executed_at: string;
+  }>;
   cadence_stopped?: boolean;
   cadence_start_date?: string | null;
+  resume_campaign_cadence?: boolean;
+  cadence_resume_day?: number | null;
+  cadence_paused_at?: string | null;
+  cadence_resume_from_date?: string | null;
 }
 
 export const Dashboard: FC = () => {
@@ -695,12 +705,79 @@ export const Dashboard: FC = () => {
     const newPausedState = !activeCampaign.cadence_stopped;
 
     try {
+      // Get current day and attempt from existing cadence_progress
+      let currentDay = 1;
+      let currentAttempt = 1;
+
+      if (
+        activeCampaign.cadence_progress &&
+        activeCampaign.cadence_progress.length > 0
+      ) {
+        // Get the single progress record
+        const progress = activeCampaign.cadence_progress[0];
+        currentDay = progress.day;
+        currentAttempt = progress.attempt;
+      }
+
+      // Check if attempts for current day are completed using existing cadence_template data
+      let attemptsCompleted = false;
+      let resumeDay = currentDay;
+
+      if (activeCampaign.cadence_template?.cadence_days) {
+        const cadenceDays = activeCampaign.cadence_template
+          .cadence_days as Record<
+          string,
+          { attempts: number; time_windows: string[] }
+        >;
+        const dayConfig = cadenceDays[currentDay.toString()];
+
+        if (dayConfig && dayConfig.attempts <= currentAttempt) {
+          // All attempts for current day are completed
+          attemptsCompleted = true;
+          resumeDay = currentDay + 1;
+        }
+      }
+
+      let updateData: any = {
+        id: activeCampaign.id,
+        cadence_stopped: newPausedState,
+      };
+
+      if (newPausedState) {
+        // If stopping the cadence
+
+        // If attempts for current day are completed, resume from next day
+        updateData = {
+          ...updateData,
+          cadence_paused_at: new Date(),
+          cadence_resume_day: resumeDay,
+          resume_campaign_cadence: false,
+          cadence_resume_from_date: null,
+        };
+      } else {
+        // If attempts for current day are not completed, resume from current day
+        const now = new Date();
+        updateData = {
+          ...updateData,
+          cadence_stopped: false,
+          resume_campaign_cadence: true,
+          cadence_resume_from_date: new Date(
+            Date.UTC(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate(),
+              0,
+              0,
+              0,
+              0
+            )
+          ).toISOString(),
+        };
+      }
+
       const { data, errors } = await updateCampaignMutation({
         variables: {
-          input: {
-            id: activeCampaign.id,
-            cadence_stopped: newPausedState,
-          },
+          input: updateData,
         },
       });
 
@@ -1007,9 +1084,13 @@ export const Dashboard: FC = () => {
                   activeCampaign?.cadence_stopped ? "default" : "outline"
                 }
                 onClick={handleToggleCadenceExecution}
-                disabled={!activeCampaign?.cadence_template?.id}
+                disabled={
+                  !activeCampaign?.cadence_template?.id ||
+                  !activeCampaign?.cadence_progress?.length
+                }
                 className={
-                  !activeCampaign?.cadence_template?.id
+                  !activeCampaign?.cadence_template?.id ||
+                  !activeCampaign?.cadence_progress?.length
                     ? "cursor-not-allowed opacity-50"
                     : ""
                 }

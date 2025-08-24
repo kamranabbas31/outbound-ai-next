@@ -22,9 +22,17 @@ query FetchCampaigns($userId: String!) {
       cost
       user_id
       created_at
+      cadence_start_date
+      cadence_stopped
+      cadence_completed
+      resume_campaign_cadence
+      cadence_resume_day
+      cadence_paused_at
+      cadence_resume_from_date
       cadence_template {
         id
         name
+        cadence_days
       }
       cadence_progress {
         id
@@ -92,9 +100,20 @@ query FetchCampaignById($campaignId: ID!) {
       cadence_start_date
       cadence_stopped
       cadence_completed
+      resume_campaign_cadence
+      cadence_resume_day
+      cadence_paused_at
+      cadence_resume_from_date
       cadence_template {
         id
         name
+        cadence_days
+      }
+      cadence_progress {
+        id
+        day
+        attempt
+        executed_at
       }
     }
   }
@@ -229,6 +248,10 @@ mutation UpdateCampaign($input: UpdateCampaignInput!) {
       cadence_start_date
       cadence_stopped
       cadence_completed
+      resume_campaign_cadence
+      cadence_resume_day
+      cadence_paused_at
+      cadence_resume_from_date
       cadence_template {
         id
         name

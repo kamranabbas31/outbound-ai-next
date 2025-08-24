@@ -109,7 +109,10 @@ export type CadenceTemplatesResponse = {
 export type Campaign = {
   __typename?: 'Campaign';
   cadence_completed?: Maybe<Scalars['Boolean']['output']>;
+  cadence_paused_at?: Maybe<Scalars['DateTime']['output']>;
   cadence_progress?: Maybe<Array<Maybe<CadenceProgress>>>;
+  cadence_resume_day?: Maybe<Scalars['Int']['output']>;
+  cadence_resume_from_date?: Maybe<Scalars['DateTime']['output']>;
   cadence_start_date?: Maybe<Scalars['DateTime']['output']>;
   cadence_stopped?: Maybe<Scalars['Boolean']['output']>;
   cadence_template?: Maybe<CadenceTemplate>;
@@ -126,6 +129,7 @@ export type Campaign = {
   leads_count?: Maybe<Scalars['Int']['output']>;
   name: Scalars['String']['output'];
   remaining?: Maybe<Scalars['Int']['output']>;
+  resume_campaign_cadence?: Maybe<Scalars['Boolean']['output']>;
   status?: Maybe<Scalars['String']['output']>;
   user_id?: Maybe<Scalars['String']['output']>;
 };
@@ -472,6 +476,9 @@ export type UpdateCadenceTemplateResponse = {
 
 export type UpdateCampaignInput = {
   cadence_completed?: InputMaybe<Scalars['Boolean']['input']>;
+  cadence_paused_at?: InputMaybe<Scalars['DateTime']['input']>;
+  cadence_resume_day?: InputMaybe<Scalars['Int']['input']>;
+  cadence_resume_from_date?: InputMaybe<Scalars['DateTime']['input']>;
   cadence_start_date?: InputMaybe<Scalars['DateTime']['input']>;
   cadence_stopped?: InputMaybe<Scalars['Boolean']['input']>;
   cadence_template_id?: InputMaybe<Scalars['String']['input']>;
@@ -486,6 +493,7 @@ export type UpdateCampaignInput = {
   leads_count?: InputMaybe<Scalars['Int']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   remaining?: InputMaybe<Scalars['Int']['input']>;
+  resume_campaign_cadence?: InputMaybe<Scalars['Boolean']['input']>;
   status?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -583,7 +591,7 @@ export type FetchCampaignsQueryVariables = Exact<{
 }>;
 
 
-export type FetchCampaignsQuery = { __typename?: 'Query', fetchCampaigns: { __typename?: 'CampaignListResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: Array<{ __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string } | null, cadence_progress?: Array<{ __typename?: 'CadenceProgress', id: string, day: number, attempt: number, executed_at: string } | null> | null }> | null } };
+export type FetchCampaignsQuery = { __typename?: 'Query', fetchCampaigns: { __typename?: 'CampaignListResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: Array<{ __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_start_date?: any | null, cadence_stopped?: boolean | null, cadence_completed?: boolean | null, resume_campaign_cadence?: boolean | null, cadence_resume_day?: number | null, cadence_paused_at?: any | null, cadence_resume_from_date?: any | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string, cadence_days: any } | null, cadence_progress?: Array<{ __typename?: 'CadenceProgress', id: string, day: number, attempt: number, executed_at: string } | null> | null }> | null } };
 
 export type FetchLeadsForCampaignQueryVariables = Exact<{
   campaignId: Scalars['String']['input'];
@@ -600,7 +608,7 @@ export type FetchCampaignByIdQueryVariables = Exact<{
 }>;
 
 
-export type FetchCampaignByIdQuery = { __typename?: 'Query', fetchCampaignById: { __typename?: 'CampaignResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: { __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_template_id?: string | null, cadence_start_date?: any | null, cadence_stopped?: boolean | null, cadence_completed?: boolean | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string } | null } | null } };
+export type FetchCampaignByIdQuery = { __typename?: 'Query', fetchCampaignById: { __typename?: 'CampaignResponse', userError?: { __typename?: 'UserError', message: string } | null, data?: { __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_template_id?: string | null, cadence_start_date?: any | null, cadence_stopped?: boolean | null, cadence_completed?: boolean | null, resume_campaign_cadence?: boolean | null, cadence_resume_day?: number | null, cadence_paused_at?: any | null, cadence_resume_from_date?: any | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string, cadence_days: any } | null, cadence_progress?: Array<{ __typename?: 'CadenceProgress', id: string, day: number, attempt: number, executed_at: string } | null> | null } | null } };
 
 export type FetchCampaignStatsQueryVariables = Exact<{
   campaignId: Scalars['ID']['input'];
@@ -669,7 +677,7 @@ export type UpdateCampaignMutationVariables = Exact<{
 }>;
 
 
-export type UpdateCampaignMutation = { __typename?: 'Mutation', updateCampaign: { __typename?: 'UpdateCampaignResponse', success: boolean, userError?: { __typename?: 'UserError', message: string } | null, campaign?: { __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_template_id?: string | null, cadence_start_date?: any | null, cadence_stopped?: boolean | null, cadence_completed?: boolean | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string } | null } | null } };
+export type UpdateCampaignMutation = { __typename?: 'Mutation', updateCampaign: { __typename?: 'UpdateCampaignResponse', success: boolean, userError?: { __typename?: 'UserError', message: string } | null, campaign?: { __typename?: 'Campaign', id: string, name: string, file_name?: string | null, status?: string | null, execution_status?: string | null, leads_count?: number | null, completed?: number | null, in_progress?: number | null, remaining?: number | null, failed?: number | null, duration?: number | null, cost?: number | null, user_id?: string | null, created_at?: string | null, cadence_template_id?: string | null, cadence_start_date?: any | null, cadence_stopped?: boolean | null, cadence_completed?: boolean | null, resume_campaign_cadence?: boolean | null, cadence_resume_day?: number | null, cadence_paused_at?: any | null, cadence_resume_from_date?: any | null, cadence_template?: { __typename?: 'CadenceTemplate', id: string, name: string } | null } | null } };
 
 export type FetchDashboardStatsQueryVariables = Exact<{
   userId: Scalars['String']['input'];
@@ -1156,9 +1164,17 @@ export const FetchCampaignsDocument = gql`
       cost
       user_id
       created_at
+      cadence_start_date
+      cadence_stopped
+      cadence_completed
+      resume_campaign_cadence
+      cadence_resume_day
+      cadence_paused_at
+      cadence_resume_from_date
       cadence_template {
         id
         name
+        cadence_days
       }
       cadence_progress {
         id
@@ -1292,9 +1308,20 @@ export const FetchCampaignByIdDocument = gql`
       cadence_start_date
       cadence_stopped
       cadence_completed
+      resume_campaign_cadence
+      cadence_resume_day
+      cadence_paused_at
+      cadence_resume_from_date
       cadence_template {
         id
         name
+        cadence_days
+      }
+      cadence_progress {
+        id
+        day
+        attempt
+        executed_at
       }
     }
   }
@@ -1686,6 +1713,10 @@ export const UpdateCampaignDocument = gql`
       cadence_start_date
       cadence_stopped
       cadence_completed
+      resume_campaign_cadence
+      cadence_resume_day
+      cadence_paused_at
+      cadence_resume_from_date
       cadence_template {
         id
         name

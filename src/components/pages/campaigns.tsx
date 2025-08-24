@@ -32,6 +32,12 @@ interface Campaign {
     attempt: number;
     executed_at: string;
   }>;
+  cadence_stopped?: boolean;
+  cadence_start_date?: string | null;
+  resume_campaign_cadence?: boolean;
+  cadence_resume_day?: number | null;
+  cadence_paused_at?: string | null;
+  cadence_resume_from_date?: string | null;
 }
 
 const Campaigns: FC = () => {
@@ -54,7 +60,10 @@ const Campaigns: FC = () => {
         return;
       }
 
-      const result = await fetchCampaigns({ variables: { userId }, fetchPolicy: "network-only" });
+      const result = await fetchCampaigns({
+        variables: { userId },
+        fetchPolicy: "network-only",
+      });
 
       const campaigns =
         (result?.data?.fetchCampaigns?.data as Campaign[]) ?? [];
@@ -113,9 +122,7 @@ const Campaigns: FC = () => {
           <Badge className="bg-amber-500 hover:bg-amber-600">Partial</Badge>
         );
       case "failed":
-        return (
-          <Badge className="bg-red-500 hover:bg-red-600">Failed</Badge>
-        );
+        return <Badge className="bg-red-500 hover:bg-red-600">Failed</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -297,7 +304,12 @@ const Campaigns: FC = () => {
                         variant="outline"
                         size="sm"
                         onClick={(e) =>
-                          handleDownloadReport(campaign.id, campaign.name, campaign.cadence_template?.id ? true : false, e)
+                          handleDownloadReport(
+                            campaign.id,
+                            campaign.name,
+                            campaign.cadence_template?.id ? true : false,
+                            e
+                          )
                         }
                         className="flex items-center gap-2"
                       >
