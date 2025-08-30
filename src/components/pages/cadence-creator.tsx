@@ -576,8 +576,8 @@ export default function CadenceCreator() {
             ? endMinutes - startMinutes
             : 24 * 60 - startMinutes + endMinutes;
 
-        // Check if time difference is at least 30 minutes
-        if (timeDifference < 30) {
+        // Check if time difference is at least 60 minutes
+        if (timeDifference < 59) {
           return true;
         }
 
@@ -587,7 +587,19 @@ export default function CadenceCreator() {
 
     if (hasInvalidTimeWindows) {
       toast.error(
-        "Each time window must be at least 30 minutes long. Complete all time windows before saving."
+        "Each time window must be at least 59 minutes long. Complete all time windows before saving."
+      );
+      hasError = true;
+    }
+
+    // Validate that time windows length matches attempts for each day
+    const hasMismatchedTimeWindows = cadenceDays.some((day) => {
+      return day.timeWindows.length !== day.attempts;
+    });
+
+    if (hasMismatchedTimeWindows) {
+      toast.error(
+        "The number of time windows must match the number of attempts for each day. Each attempt needs exactly one time window."
       );
       hasError = true;
     }
